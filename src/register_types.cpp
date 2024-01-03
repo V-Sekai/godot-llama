@@ -8,28 +8,28 @@
 
 static Ref<ResourceFormatLoaderLlama> llama_loader;
 
-static SpeechToText *SpeechToTextPtr;
+static TextToText *TextToTextPtr;
 
 void initialize_llama_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
-	GDREGISTER_CLASS(SpeechToText);
+	GDREGISTER_CLASS(TextToText);
 	GDREGISTER_CLASS(LlamaResource);
 	GDREGISTER_CLASS(ResourceFormatLoaderLlama);
 	llama_loader.instantiate();
 	ResourceLoader::get_singleton()->add_resource_format_loader(llama_loader);
 
-	SpeechToTextPtr = memnew(SpeechToText);
-	Engine::get_singleton()->register_singleton("SpeechToText", SpeechToText::get_singleton());
+	TextToTextPtr = memnew(TextToText);
+	Engine::get_singleton()->register_singleton("TextToText", TextToText::get_singleton());
 }
 
 void uninitialize_llama_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
-	Engine::get_singleton()->unregister_singleton("SpeechToText");
-	memdelete(SpeechToTextPtr);
+	Engine::get_singleton()->unregister_singleton("TextToText");
+	memdelete(TextToTextPtr);
 
 	ResourceLoader::get_singleton()->remove_resource_format_loader(llama_loader);
 	llama_loader.unref();

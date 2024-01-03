@@ -25,13 +25,13 @@
 
 Go to a github release, copy paste the addons folder to the demo folder. Restart godot editor.
 
-## SpeechToText
+## TextToText
 
-`SpeechToText` Node has a `transcribe` which gets a buffer that it transcribes.
+`TextToText` Node has a `transcribe` which gets a buffer that it transcribes.
 
 ## CaptureStreamToText
 
-`CaptureStreamToText` - extends SpeechToText and runs transcribe function every 5 seconds.
+`CaptureStreamToText` - extends TextToText and runs transcribe function every 5 seconds.
 
 ## Main thread
 

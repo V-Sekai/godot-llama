@@ -25,7 +25,7 @@ struct transcribed_msg {
 	bool is_partial;
 };
 
-class SpeechToText : public Node {
+class TextToText : public Node {
 public:
 	enum Language {
 		Auto,
@@ -131,10 +131,10 @@ public:
 		Cantonese
 	};
 
-	static SpeechToText *singleton;
+	static TextToText *singleton;
 
 private:
-	GDCLASS(SpeechToText, Node);
+	GDCLASS(TextToText, Node);
 
 	struct whisper_params {
 		int32_t n_threads = MIN(4, (int32_t)OS::get_singleton()->get_processor_count());
@@ -174,11 +174,11 @@ public:
 	enum {
 		SPEECH_SETTING_SAMPLE_RATE = 16000,
 	};
-	static SpeechToText *get_singleton();
+	static TextToText *get_singleton();
 	void set_language_model(Ref<LlamaResource> p_model);
 	_FORCE_INLINE_ Ref<LlamaResource> get_language_model() { return model; }
-	SpeechToText();
-	~SpeechToText();
+	TextToText();
+	~TextToText();
 
 	std::atomic<bool> is_running;
 	std::vector<float> s_queued_pcmf32;

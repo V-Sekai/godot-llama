@@ -14,17 +14,17 @@
 #include <string>
 #include <vector>
 
-SpeechToText *SpeechToText::singleton = nullptr;
+TextToText *TextToText::singleton = nullptr;
 
-SpeechToText *SpeechToText::get_singleton() {
+TextToText *TextToText::get_singleton() {
 	return singleton;
 }
 
-SpeechToText::SpeechToText() {
+TextToText::TextToText() {
 	singleton = this;
 }
 
-void SpeechToText::start_listen() {
+void TextToText::start_listen() {
 	if (is_running == false) {
 		is_running = true;
 		worker.start(Callable(this, StringName("run")), Thread::Priority::PRIORITY_NORMAL);
@@ -32,14 +32,14 @@ void SpeechToText::start_listen() {
 	}
 }
 
-void SpeechToText::stop_inference() {
+void TextToText::stop_inference() {
 	is_running = false;
 	if (worker.is_started()) {
 		worker.wait_to_finish();
 	}
 }
 
-void SpeechToText::load_model() {
+void TextToText::load_model() {
 	llama_free(context_instance);
 	if (model.is_null()) {
 		return;
@@ -64,13 +64,13 @@ void SpeechToText::load_model() {
 	UtilityFunctions::print(llama_print_system_info());
 }
 
-SpeechToText::~SpeechToText() {
+TextToText::~TextToText() {
 	singleton = nullptr;
 	stop_inference();
 	llama_free(context_instance);
 }
 
-void SpeechToText::add_string(const String buffer) {
+void TextToText::add_string(const String buffer) {
 	s_mutex.lock();
 	// total length of the sequence including the prompt
 	const int n_len = 32;
@@ -160,7 +160,7 @@ void SpeechToText::add_string(const String buffer) {
 }
 
 /** Get newly transcribed text. */
-std::vector<transcribed_msg> SpeechToText::get_transcribed() {
+std::vector<transcribed_msg> TextToText::get_transcribed() {
 	std::vector<transcribed_msg> transcribed;
 	s_mutex.lock();
 	transcribed = std::move(s_transcribed_msgs);
@@ -170,8 +170,8 @@ std::vector<transcribed_msg> SpeechToText::get_transcribed() {
 }
 
 /** Run Whisper in its own thread to not block the main thread. */
-void SpeechToText::run() {
-	SpeechToText *speech_to_text_obj = SpeechToText::get_singleton();
+void TextToText::run() {
+	TextToText *speech_to_text_obj = TextToText::get_singleton();
 	// whisper_full_params whisper_params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
 	// // See here for example https://github.com/ggerganov/whisper.cpp/blob/master/examples/stream/stream.cpp#L302
 	// whisper_params.max_len = 1;
@@ -353,13 +353,13 @@ void SpeechToText::run() {
 	// }
 }
 
-void SpeechToText::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("add_string", "buffer"), &SpeechToText::add_string);
-	ClassDB::bind_method(D_METHOD("get_language_model"), &SpeechToText::get_language_model);
-	ClassDB::bind_method(D_METHOD("set_language_model", "model"), &SpeechToText::set_language_model);
-	ClassDB::bind_method(D_METHOD("start_listen"), &SpeechToText::start_listen);
-	ClassDB::bind_method(D_METHOD("run"), &SpeechToText::run);
-	ClassDB::bind_method(D_METHOD("stop_inference"), &SpeechToText::stop_inference);
+void TextToText::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("add_string", "buffer"), &TextToText::add_string);
+	ClassDB::bind_method(D_METHOD("get_language_model"), &TextToText::get_language_model);
+	ClassDB::bind_method(D_METHOD("set_language_model", "model"), &TextToText::set_language_model);
+	ClassDB::bind_method(D_METHOD("start_listen"), &TextToText::start_listen);
+	ClassDB::bind_method(D_METHOD("run"), &TextToText::run);
+	ClassDB::bind_method(D_METHOD("stop_inference"), &TextToText::stop_inference);
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "language_model", PROPERTY_HINT_RESOURCE_TYPE, "LlamaResource"), "set_language_model", "get_language_model");
 
 	ADD_SIGNAL(MethodInfo("update_transcribed_msgs", PropertyInfo(Variant::ARRAY, "transcribed_msgs")));
