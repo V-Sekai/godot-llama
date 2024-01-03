@@ -51,10 +51,12 @@ void TextToText::load_model() {
 	llama_model_params model_params = llama_model_default_params();
 	model_params.n_gpu_layers = 99;
 	language_model = llama_load_model_from_file(model->get_file().utf8().get_data(), model_params);
+	// FIXME: fire 2024-01-03
 	// params.prompt = "Hello my name is";
 	llama_backend_init(OS::get_singleton()->get_processor_count());
 
 	context_parameters = llama_context_default_params();
+	// FIXME: fire 2024-01-03
 	// context_parameters.seed  = 1234;
 	// context_parameters.n_ctx = 2048;
 	// context_parameters.n_threads = params.n_threads;
@@ -72,8 +74,7 @@ TextToText::~TextToText() {
 
 void TextToText::add_string(const String buffer) {
 	s_mutex.lock();
-	// total length of the sequence including the prompt
-	const int n_len = 32;
+	const int total_length_of_sequence_with_prompt = 32;
 
 	int32_t n_max_tokens = 512;
 	std::vector<llama_token> tokens_list(n_max_tokens);
@@ -87,16 +88,13 @@ void TextToText::add_string(const String buffer) {
 
 	tokens_list.resize(n_tokens); // Adjust the size based on the actual number of tokens.
 
-	// Create a new batch for inference.
-	llama_batch batch = llama_batch_init(n_tokens, 0, 1);
+	llama_batch new_inference_batch = llama_batch_init(n_tokens, 0, 1);
 
-	// Load tokens into the batch for evaluation.
 	for (int i = 0; i < n_tokens; ++i) {
 		llama_batch_add(batch, tokens_list[i], i, { 0 }, false);
 	}
 
-	// Set the last token to output logits for sampling.
-	batch.logits[batch.n_tokens - 1] = true;
+	new_inference_batch.logits[batch.n_tokens - 1] = true;
 
 	if (llama_decode(context_instance, batch)) {
 		s_mutex.unlock();
@@ -109,7 +107,7 @@ void TextToText::add_string(const String buffer) {
 
 	const auto t_main_start = ggml_time_us();
 
-	while (n_cur <= n_len) {
+	while (n_cur <= total_length_of_sequence_with_prompt) {
 		auto n_vocab = llama_n_vocab(language_model);
 		auto *logits = llama_get_logits_ith(context_instance, batch.n_tokens - 1);
 
