@@ -1,8 +1,8 @@
 #include "register_types.h"
 
+#include "language_inference.h"
 #include "resource_loader_whisper.h"
 #include "resource_whisper.h"
-#include "language_inference.h"
 
 #include <godot_cpp/classes/resource_loader.hpp>
 
