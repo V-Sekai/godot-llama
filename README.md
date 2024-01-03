@@ -1,8 +1,8 @@
 # Godot llama
 
 <p align="center">
-	<a href="https://github.com/V-Sekai/godot-whisper/actions/workflows/runner.yml">
-        <img src="https://github.com/V-Sekai/godot-whisper/actions/workflows/runner.yml/badge.svg?branch=main"
+	<a href="https://github.com/V-Sekai/godot-llama/actions/workflows/runner.yml">
+        <img src="https://github.com/V-Sekai/godot-llama/actions/workflows/runner.yml/badge.svg?branch=main"
             alt="chat on Discord"></a>
     <a href="https://github.com/ggerganov/whisper.cpp" alt="Whisper CPP">
         <img src="https://img.shields.io/badge/WhisperCPP-v1.5.1-%23478cbf?logoColor=white" /></a>
