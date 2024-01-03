@@ -94,7 +94,7 @@ void TextToText::add_string(const String buffer) {
 		llama_batch_add(new_inference_batch, tokens_list[i], i, { 0 }, false);
 	}
 
-	new_inference_batch.logits[batch.n_tokens - 1] = true;
+	new_inference_batch.logits[new_inference_batch.n_tokens - 1] = true;
 
 	if (llama_decode(context_instance, new_inference_batch)) {
 		s_mutex.unlock();
@@ -102,14 +102,14 @@ void TextToText::add_string(const String buffer) {
 		return;
 	}
 
-	int n_cur = batch.n_tokens;
+	int n_cur = new_inference_batch.n_tokens;
 	int n_decode = 0;
 
 	const auto t_main_start = ggml_time_us();
 
 	while (n_cur <= total_length_of_sequence_with_prompt) {
 		auto n_vocab = llama_n_vocab(language_model);
-		auto *logits = llama_get_logits_ith(context_instance, batch.n_tokens - 1);
+		auto *logits = llama_get_logits_ith(context_instance, new_inference_batch.n_tokens - 1);
 
 		std::vector<llama_token_data> candidates;
 		candidates.reserve(n_vocab);
@@ -122,7 +122,7 @@ void TextToText::add_string(const String buffer) {
 
 		const llama_token new_token_id = llama_sample_token_greedy(context_instance, &candidates_p);
 
-		if (new_token_id == llama_token_eos(language_model) || n_cur == n_len) {
+		if (new_token_id == llama_token_eos(language_model) || n_cur == total_length_of_sequence_with_prompt) {
 			UtilityFunctions::print(String());
 			break;
 		}
@@ -132,14 +132,14 @@ void TextToText::add_string(const String buffer) {
 		llama_token_to_piece(language_model, new_token_id, token_piece.ptrw(), token_piece.size());
 		UtilityFunctions::print(String(token_piece.ptr()));
 
-		llama_batch_clear(batch);
+		llama_batch_clear(new_inference_batch);
 
-		llama_batch_add(batch, new_token_id, n_cur, { 0 }, true);
+		llama_batch_add(new_inference_batch, new_token_id, n_cur, { 0 }, true);
 
 		n_decode += 1;
 		n_cur += 1;
 
-		if (llama_decode(context_instance, batch)) {
+		if (llama_decode(context_instance, new_inference_batch)) {
 			s_mutex.unlock();
 			ERR_PRINT(vformat("%s : failed to eval, return code %d", __func__, 1));
 			return;
