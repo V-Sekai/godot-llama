@@ -11,19 +11,19 @@ env.Append(
         "VERSION=",
         "CPU_CLIPS_POSITIVE=0",
         "CPU_CLIPS_NEGATIVE=0",
-        "WEBRTC_APM_DEBUG_DUMP=0",
         "WHISPER_BUILD",
         "GGML_BUILD",
     ]
 )
 
-env.Prepend(CPPPATH=["thirdparty", "include"])
+env.Prepend(CPPPATH=["thirdparty", "include", "thirdparty/llama.cpp"])
 env.Append(CPPPATH=["src/"])
 env.Append(CPPDEFINES=['WHISPER_SHARED', 'GGML_SHARED'])
 sources = [Glob("src/*.cpp")]
 
 sources.extend([
     "thirdparty/llama.cpp/llama.cpp",
+    "thirdparty/llama.cpp/common/common.cpp",
     "thirdparty/llama.cpp/ggml-alloc.c",
     "thirdparty/llama.cpp/ggml-backend.c",
     "thirdparty/llama.cpp/ggml.c",

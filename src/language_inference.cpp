@@ -1,4 +1,6 @@
 #include "language_inference.h"
+#include "llama.h"
+#include "common/common.h"
 #include <atomic>
 #include <cmath>
 #include <cstdint>
@@ -75,7 +77,7 @@ void SpeechToText::add_string(const String buffer) {
 
 	int32_t n_max_tokens = 512;
 	std::vector<llama_token> tokens_list(n_max_tokens);
-	int32_t n_tokens = llama_tokenize(model, buffer.utf8().get_data(), buffer.utf8().size(), tokens_list.data(), n_max_tokens, false /* no BOS */, false /* not special */);
+	int32_t n_tokens = llama_tokenize(language_model, buffer.utf8().get_data(), buffer.utf8().size(), tokens_list.data(), n_max_tokens, false /* no BOS */, false /* not special */);
 
 	if (n_tokens < 0) {
 		s_mutex.unlock();
@@ -96,7 +98,7 @@ void SpeechToText::add_string(const String buffer) {
 	// Set the last token to output logits for sampling.
 	batch.logits[batch.n_tokens - 1] = true;
 
-	if (llama_decode(ctx, batch)) {
+	if (llama_decode(context_instance, batch)) {
 		s_mutex.unlock();
 		ERR_PRINT("Error: Model decoding failed.");
 		return;
@@ -123,7 +125,7 @@ void SpeechToText::add_string(const String buffer) {
 		const llama_token new_token_id = llama_sample_token_greedy(context_instance, &candidates_p);
 
 		if (new_token_id == llama_token_eos(language_model) || n_cur == n_len) {
-			print('\n');
+			print_line(String());
 			break;
 		}
 
