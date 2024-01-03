@@ -16,6 +16,13 @@ env.Append(
     ]
 )
 
+if env["platform"] == "android":
+    env.Append(
+        CPPDEFINES=[
+            ("_POSIX_MAPPED_FILES", 0),
+        ]
+    )
+
 env.Prepend(CPPPATH=["thirdparty", "include", "thirdparty/llama.cpp"])
 env.Append(CPPPATH=["src/"])
 env.Append(CPPDEFINES=['WHISPER_SHARED', 'GGML_SHARED'])
