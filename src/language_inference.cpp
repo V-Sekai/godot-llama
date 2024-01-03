@@ -1,6 +1,7 @@
 #include "language_inference.h"
 #include <atomic>
 #include <cmath>
+#include <cstdint>
 #include <godot_cpp/classes/audio_server.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/time.hpp>
@@ -45,19 +46,19 @@ void SpeechToText::load_model() {
 	if (data.is_empty()) {
 		return;
 	}
-    llama_model_params model_params = llama_model_default_params();
+	llama_model_params model_params = llama_model_default_params();
 	model_params.n_gpu_layers = 99;
 	language_model = llama_load_model_from_file(model->get_file().utf8().get_data(), model_params);
-    // params.prompt = "Hello my name is";
-    llama_backend_init(OS::get_singleton()->get_processor_count());
+	// params.prompt = "Hello my name is";
+	llama_backend_init(OS::get_singleton()->get_processor_count());
 
-    context_parameters = llama_context_default_params();
-    // context_parameters.seed  = 1234;
-    // context_parameters.n_ctx = 2048;
-    // context_parameters.n_threads = params.n_threads;
-    // context_parameters.n_threads_batch = params.n_threads_batch == -1 ? params.n_threads : params.n_threads_batch;
+	context_parameters = llama_context_default_params();
+	// context_parameters.seed  = 1234;
+	// context_parameters.n_ctx = 2048;
+	// context_parameters.n_threads = params.n_threads;
+	// context_parameters.n_threads_batch = params.n_threads_batch == -1 ? params.n_threads : params.n_threads_batch;
 
-    context_instance = llama_new_context_with_model(language_model, context_parameters);
+	context_instance = llama_new_context_with_model(language_model, context_parameters);
 	UtilityFunctions::print(llama_print_system_info());
 }
 
@@ -67,23 +68,89 @@ SpeechToText::~SpeechToText() {
 	llama_free(context_instance);
 }
 
-void SpeechToText::add_string(String buffer) {
+void SpeechToText::add_string(const String buffer) {
 	s_mutex.lock();
-	// int buffer_len = buffer.size();
-	// float *buffer_float = (float *)memalloc(sizeof(float) * buffer_len);
-	// float *resampled_float = (float *)memalloc(sizeof(float) * buffer_len * SPEECH_SETTING_SAMPLE_RATE / AudioServer::get_singleton()->get_mix_rate());
-	// _vector2_array_to_float_array(buffer_len, buffer.ptr(), buffer_float);
-	// // Speaker frame.
-	// int result_size = _resample_audio_buffer(
-	// 		buffer_float, // Pointer to source buffer
-	// 		buffer_len, // Size of source buffer * sizeof(float)
-	// 		AudioServer::get_singleton()->get_mix_rate(), // Source sample rate
-	// 		SPEECH_SETTING_SAMPLE_RATE, // Target sample rate
-	// 		resampled_float);
-	// const std::vector<float> data(resampled_float, resampled_float + result_size);
-	// s_queued_pcmf32.insert(s_queued_pcmf32.end(), data.begin(), data.end());
-	// memfree(buffer_float);
-	// memfree(resampled_float);
+	// total length of the sequence including the prompt
+	const int n_len = 32;
+
+	int32_t n_max_tokens = 512;
+	std::vector<llama_token> tokens_list(n_max_tokens);
+	int32_t n_tokens = llama_tokenize(model, buffer.utf8().get_data(), buffer.utf8().size(), tokens_list.data(), n_max_tokens, false /* no BOS */, false /* not special */);
+
+	if (n_tokens < 0) {
+		s_mutex.unlock();
+		ERR_PRINT("Error: Tokenization failed due to insufficient token space.");
+		return;
+	}
+
+	tokens_list.resize(n_tokens); // Adjust the size based on the actual number of tokens.
+
+	// Create a new batch for inference.
+	llama_batch batch = llama_batch_init(n_tokens, 0, 1);
+
+	// Load tokens into the batch for evaluation.
+	for (int i = 0; i < n_tokens; ++i) {
+		llama_batch_add(batch, tokens_list[i], i, { 0 }, false);
+	}
+
+	// Set the last token to output logits for sampling.
+	batch.logits[batch.n_tokens - 1] = true;
+
+	if (llama_decode(ctx, batch)) {
+		s_mutex.unlock();
+		ERR_PRINT("Error: Model decoding failed.");
+		return;
+	}
+
+	int n_cur = batch.n_tokens;
+	int n_decode = 0;
+
+	const auto t_main_start = ggml_time_us();
+
+	while (n_cur <= n_len) {
+		auto n_vocab = llama_n_vocab(language_model);
+		auto *logits = llama_get_logits_ith(context_instance, batch.n_tokens - 1);
+
+		std::vector<llama_token_data> candidates;
+		candidates.reserve(n_vocab);
+
+		for (llama_token token_id = 0; token_id < n_vocab; token_id++) {
+			candidates.emplace_back(llama_token_data{ token_id, logits[token_id], 0.0f });
+		}
+
+		llama_token_data_array candidates_p = { candidates.data(), candidates.size(), false };
+
+		const llama_token new_token_id = llama_sample_token_greedy(context_instance, &candidates_p);
+
+		if (new_token_id == llama_token_eos(language_model) || n_cur == n_len) {
+			print('\n');
+			break;
+		}
+
+		print(llama_token_to_piece(language_model, new_token_id).c_str());
+
+		llama_batch_clear(&batch);
+
+		llama_batch_add(&batch, new_token_id, n_cur, { 0 }, true);
+
+		n_decode += 1;
+		n_cur += 1;
+
+		if (llama_decode(context_instance, &batch)) {
+			s_mutex.unlock();
+			ERR_PRINT(vformat("%s : failed to eval, return code %d", __func__, 1));
+			return;
+		}
+	}
+
+	const int64_t t_main_end = ggml_time_us();
+
+	print_line(vformat("%s: decoded %d tokens in %.2f s, speed: %.2f t/s",
+			__func__, n_decode, (t_main_end - t_main_start) / 1000000.0f,
+			n_decode / ((t_main_end - t_main_start) / 1000000.0f)));
+
+	llama_print_timings(context_instance);
+
 	s_mutex.unlock();
 }
 
