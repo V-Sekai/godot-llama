@@ -48,7 +48,7 @@ if env["platform"] == "macos" or env["platform"] == "ios":
         ]
     )
     sources.extend([
-        Glob("thirdparty/whisper.cpp/ggml-metal.m"),
+        Glob("thirdparty/llama.cpp/ggml-metal.m"),
     ])
 else:
     # CBlast and OpenCL only on non apple platform
