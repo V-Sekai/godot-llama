@@ -6,7 +6,7 @@
 
 #include <godot_cpp/classes/resource_loader.hpp>
 
-static Ref<ResourceFormatLoaderWhisper> whisper_loader;
+static Ref<ResourceFormatLoaderLlama> llama_loader;
 
 static SpeechToText *SpeechToTextPtr;
 
@@ -15,10 +15,10 @@ void initialize_whisper_module(ModuleInitializationLevel p_level) {
 		return;
 	}
 	GDREGISTER_CLASS(SpeechToText);
-	GDREGISTER_CLASS(WhisperResource);
-	GDREGISTER_CLASS(ResourceFormatLoaderWhisper);
-	whisper_loader.instantiate();
-	ResourceLoader::get_singleton()->add_resource_format_loader(whisper_loader);
+	GDREGISTER_CLASS(LlamaResource);
+	GDREGISTER_CLASS(ResourceFormatLoaderLlama);
+	llama_loader.instantiate();
+	ResourceLoader::get_singleton()->add_resource_format_loader(llama_loader);
 
 	SpeechToTextPtr = memnew(SpeechToText);
 	Engine::get_singleton()->register_singleton("SpeechToText", SpeechToText::get_singleton());
@@ -31,8 +31,8 @@ void uninitialize_whisper_module(ModuleInitializationLevel p_level) {
 	Engine::get_singleton()->unregister_singleton("SpeechToText");
 	memdelete(SpeechToTextPtr);
 
-	ResourceLoader::get_singleton()->remove_resource_format_loader(whisper_loader);
-	whisper_loader.unref();
+	ResourceLoader::get_singleton()->remove_resource_format_loader(llama_loader);
+	llama_loader.unref();
 }
 
 extern "C" {

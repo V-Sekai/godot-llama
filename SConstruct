@@ -24,12 +24,12 @@ sources = [Glob("src/*.cpp")]
 
 sources.extend([
     Glob("thirdparty/libsamplerate/src/*.c"),
-    Glob("thirdparty/whisper.cpp/*.c"),
-    Glob("thirdparty/whisper.cpp/whisper.cpp"),
-    Glob("thirdparty/llama.cpp/*.c"),
-    Glob("thirdparty/llama.cpp/llama.cpp"),
+    "thirdparty/llama.cpp/llama.cpp",
+    "thirdparty/llama.cpp/ggml-alloc.c",
+    "thirdparty/llama.cpp/ggml-backend.c",
+    "thirdparty/llama.cpp/ggml.c",
+    "thirdparty/llama.cpp/ggml-quants.c",
 ])
-
 
 if env["platform"] == "macos" or env["platform"] == "ios":
     env.Append(LINKFLAGS=["-framework"])
@@ -54,7 +54,7 @@ if env["platform"] == "macos" or env["platform"] == "ios":
 else:
     # CBlast and OpenCL only on non apple platform
     sources.extend([
-        "thirdparty/whisper.cpp/ggml-opencl.cpp",
+        "thirdparty/llama.cpp/ggml-opencl.cpp",
     ])
 
     env.Prepend(CPPPATH=["thirdparty/opencl_headers", "thirdparty/clblast/include", "thirdparty/clblast/src"])
@@ -114,14 +114,14 @@ else:
 
 if env["platform"] == "macos":
 	library = env.SharedLibrary(
-		"bin/addons/godot_whisper/bin/libgodot_whisper{}.framework/libgodot_whisper{}".format(
+		"bin/addons/godot_llama/bin/libgodot_llama{}.framework/libgodot_llama{}".format(
 			env["suffix"], env["suffix"]
 		),
 		source=sources,
 	)
 else:
 	library = env.SharedLibrary(
-		"bin/addons/godot_whisper/bin/libgodot_whisper{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
+		"bin/addons/godot_llama/bin/libgodot_llama{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
 		source=sources,
 	)
 Default(library)

@@ -12,8 +12,7 @@
 #include <godot_cpp/variant/array.hpp>
 #include <godot_cpp/variant/callable.hpp>
 
-#include <libsamplerate/src/samplerate.h>
-#include <whisper.cpp/whisper.h>
+#include <llama.cpp/llama.h>
 
 #include <atomic>
 #include <string>
@@ -162,12 +161,11 @@ private:
 		float entropy_threshold = 2.8f;
 		int32_t max_context_size = 224;
 	};
-	Language language = English;
-	Ref<WhisperResource> model;
-	whisper_params params;
-	whisper_full_params full_params;
-	whisper_context_params context_parameters{ true };
-	whisper_context *context_instance = nullptr;
+	Ref<LlamaResource> model;
+	llama_model * language_model; 
+	llama_model_params params;
+	llama_context_params context_parameters{ true };
+	llama_context *context_instance = nullptr;
 
 protected:
 	static void _bind_methods();
@@ -177,13 +175,8 @@ public:
 		SPEECH_SETTING_SAMPLE_RATE = 16000,
 	};
 	static SpeechToText *get_singleton();
-	std::string language_to_code(Language language);
-	void set_language(int p_language);
-	int get_language();
-	void set_language_model(Ref<WhisperResource> p_model);
-	_FORCE_INLINE_ Ref<WhisperResource> get_language_model() { return model; }
-	void set_use_gpu(bool use_gpu);
-	_FORCE_INLINE_ bool is_use_gpu() { return context_parameters.use_gpu; }
+	void set_language_model(Ref<LlamaResource> p_model);
+	_FORCE_INLINE_ Ref<LlamaResource> get_language_model() { return model; }
 	SpeechToText();
 	~SpeechToText();
 
@@ -195,15 +188,15 @@ public:
 	void run();
 	int t_last_iter;
 
-	_FORCE_INLINE_ void set_entropy_threshold(float entropy_threshold) { params.entropy_threshold = entropy_threshold; }
-	_FORCE_INLINE_ float get_entropy_threshold() { return params.entropy_threshold; }
+	// _FORCE_INLINE_ void set_entropy_threshold(float entropy_threshold) { params.entropy_threshold = entropy_threshold; }
+	// _FORCE_INLINE_ float get_entropy_threshold() { return params.entropy_threshold; }
 
-	_FORCE_INLINE_ void set_max_context_size(int32_t max_context_size) { params.max_context_size = max_context_size; }
-	_FORCE_INLINE_ int32_t get_max_context_size() { return params.max_context_size; }
-	void add_audio_buffer(PackedVector2Array buffer);
+	// _FORCE_INLINE_ void set_max_context_size(int32_t max_context_size) { params.max_context_size = max_context_size; }
+	// _FORCE_INLINE_ int32_t get_max_context_size() { return params.max_context_size; }
+	void add_string(String buffer);
 	std::vector<transcribed_msg> get_transcribed();
 	void start_listen();
-	void stop_listen();
+	void stop_inference();
 	void load_model();
 };
 

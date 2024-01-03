@@ -5,8 +5,8 @@
 
 using namespace godot;
 
-class WhisperResource : public Resource {
-	GDCLASS(WhisperResource, Resource);
+class LlamaResource : public Resource {
+	GDCLASS(LlamaResource, Resource);
 
 protected:
 	static void _bind_methods() {}
@@ -23,7 +23,7 @@ public:
 	}
 
 	PackedByteArray get_content();
-	WhisperResource() {}
-	~WhisperResource() {}
+	LlamaResource() {}
+	~LlamaResource() {}
 };
 #endif // RESOURCE_JSON_H
