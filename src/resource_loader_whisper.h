@@ -6,8 +6,8 @@
 
 using namespace godot;
 
-class ResourceFormatLoaderWhisper : public ResourceFormatLoader {
-	GDCLASS(ResourceFormatLoaderWhisper, ResourceFormatLoader);
+class ResourceFormatLoaderLlama : public ResourceFormatLoader {
+	GDCLASS(ResourceFormatLoaderLlama, ResourceFormatLoader);
 
 protected:
 	static void _bind_methods() {}

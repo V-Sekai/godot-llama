@@ -1,5 +1,5 @@
 @tool
-## Node that does transcribing of real time audio. It requires a bus with a [AudioEffectCapture] and a [WhisperResource] language model.
+## Node that does transcribing of real time audio. It requires a bus with a [AudioEffectCapture] and a [LlamaResource] language model.
 class_name CaptureStreamToText
 extends Node
 signal update_transcribed_msg(index: int, is_partial:bool, text: String)
@@ -30,7 +30,7 @@ func _http_request_completed(result, response_code, headers, body, file_path):
 	if result != HTTPRequest.RESULT_SUCCESS:
 		push_error("Can't downloaded.")
 		return
-	ResourceLoader.load(file_path, "WhisperResource", 2)
+	ResourceLoader.load(file_path, "LlamaResource", 2)
 	print("Download successful. Check " + file_path + ". If file is not there, alt tab or restart editor.")
 
 ## The record bus has to have a AudioEffectCapture at index specified by [member audio_effect_capture_index]
@@ -63,7 +63,7 @@ var _speech_to_text_singleton:
 		_speech_to_text_singleton.set_language(val)
 
 ## The language model downloaded.
-@export var language_model: WhisperResource:
+@export var language_model: LlamaResource:
 	get:
 		return _speech_to_text_singleton.get_language_model()
 	set(val):
@@ -95,7 +95,7 @@ func _on_timer_timeout():
 		return
 	var buffer: PackedVector2Array = _effect_capture.get_buffer(_effect_capture.get_frames_available())
 	if is_running:
-		_speech_to_text_singleton.add_audio_buffer(buffer)
+		_speech_to_text_singleton.add_string(buffer)
 
 func _update_transcribed_msgs_func(transcribed_msgs):
 	for transcribed_msg  in transcribed_msgs:
@@ -126,8 +126,8 @@ func start_listen():
 	is_running = true
 	
 ## Stop listening to audio and transcribing.
-func stop_listen():
+func stop_inference():
 	is_running = false
-	_speech_to_text_singleton.stop_listen()
+	_speech_to_text_singleton.stop_inference()
 	
 

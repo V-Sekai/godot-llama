@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://dibqfutwftm8j"]
 
 [ext_resource type="Script" path="res://addons/godot_whisper/capture_stream_to_text.gd" id="1_36edp"]
-[ext_resource type="WhisperResource" path="res://addons/godot_whisper/models/gglm-tiny.en.bin" id="2_bbq8o"]
+[ext_resource type="LlamaResource" path="res://addons/godot_whisper/models/gglm-tiny.en.bin" id="2_bbq8o"]
 [ext_resource type="AudioStream" uid="uid://cuybt83bwegoq" path="res://jfk.wav" id="3_l8fmi"]
 [ext_resource type="Script" path="res://test_display.gd" id="3_r84sk"]
 
@@ -78,5 +78,5 @@ language_model = ExtResource("2_bbq8o")
 use_gpu = true
 
 [connection signal="pressed" from="HBoxContainer/StartButton" to="CaptureStreamToText" method="start_listen"]
-[connection signal="pressed" from="HBoxContainer/StopButton" to="CaptureStreamToText" method="stop_listen"]
+[connection signal="pressed" from="HBoxContainer/StopButton" to="CaptureStreamToText" method="stop_inference"]
 [connection signal="update_transcribed_msg" from="CaptureStreamToText" to="Panel/Label" method="_on_capture_stream_to_text_update_transcribed_msg"]
