@@ -6,6 +6,11 @@
 
 #include <godot_cpp/classes/resource_loader.hpp>
 
+int LLAMA_BUILD_NUMBER = 80;
+char const *LLAMA_COMMIT = "b399466";
+char const *LLAMA_COMPILER = "";
+char const *LLAMA_BUILD_TARGET = "unknown";
+
 static Ref<ResourceFormatLoaderLlama> llama_loader;
 
 static TextToText *TextToTextPtr;

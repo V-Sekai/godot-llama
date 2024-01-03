@@ -71,7 +71,7 @@ public:
 		SPEECH_SETTING_SAMPLE_RATE = 16000,
 	};
 	static TextToText *get_singleton();
-	void set_language_model(Ref<LlamaResource> p_model);
+	void set_language_model(Ref<LlamaResource> p_model) { model = p_model; }
 	_FORCE_INLINE_ Ref<LlamaResource> get_language_model() { return model; }
 	TextToText();
 	~TextToText();
