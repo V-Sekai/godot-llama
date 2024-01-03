@@ -91,12 +91,12 @@ void TextToText::add_string(const String buffer) {
 	llama_batch new_inference_batch = llama_batch_init(n_tokens, 0, 1);
 
 	for (int i = 0; i < n_tokens; ++i) {
-		llama_batch_add(batch, tokens_list[i], i, { 0 }, false);
+		llama_batch_add(new_inference_batch, tokens_list[i], i, { 0 }, false);
 	}
 
 	new_inference_batch.logits[batch.n_tokens - 1] = true;
 
-	if (llama_decode(context_instance, batch)) {
+	if (llama_decode(context_instance, new_inference_batch)) {
 		s_mutex.unlock();
 		ERR_PRINT("Error: Model decoding failed.");
 		return;
