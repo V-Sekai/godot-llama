@@ -1,6 +1,6 @@
 #include "language_inference.h"
-#include "llama.h"
 #include "common/common.h"
+#include "llama.h"
 #include <atomic>
 #include <cmath>
 #include <cstdint>
@@ -125,20 +125,23 @@ void SpeechToText::add_string(const String buffer) {
 		const llama_token new_token_id = llama_sample_token_greedy(context_instance, &candidates_p);
 
 		if (new_token_id == llama_token_eos(language_model) || n_cur == n_len) {
-			print_line(String());
+			UtilityFunctions::print(String());
 			break;
 		}
+		Vector<char> token_piece;
+		token_piece.resize(128);
+		token_piece.fill(0);
+		llama_token_to_piece(language_model, new_token_id, token_piece.ptrw(), token_piece.size());
+		UtilityFunctions::print(String(token_piece.ptr()));
 
-		print(llama_token_to_piece(language_model, new_token_id).c_str());
+		llama_batch_clear(batch);
 
-		llama_batch_clear(&batch);
-
-		llama_batch_add(&batch, new_token_id, n_cur, { 0 }, true);
+		llama_batch_add(batch, new_token_id, n_cur, { 0 }, true);
 
 		n_decode += 1;
 		n_cur += 1;
 
-		if (llama_decode(context_instance, &batch)) {
+		if (llama_decode(context_instance, batch)) {
 			s_mutex.unlock();
 			ERR_PRINT(vformat("%s : failed to eval, return code %d", __func__, 1));
 			return;
@@ -147,7 +150,7 @@ void SpeechToText::add_string(const String buffer) {
 
 	const int64_t t_main_end = ggml_time_us();
 
-	print_line(vformat("%s: decoded %d tokens in %.2f s, speed: %.2f t/s",
+	UtilityFunctions::print(vformat("%s: decoded %d tokens in %.2f s, speed: %.2f t/s",
 			__func__, n_decode, (t_main_end - t_main_start) / 1000000.0f,
 			n_decode / ((t_main_end - t_main_start) / 1000000.0f)));
 
