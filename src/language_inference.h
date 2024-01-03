@@ -84,7 +84,6 @@ public:
 	int t_last_iter;
 
 	void add_string(String buffer);
-	std::vector<transcribed_msg> get_transcribed();
 	void start_listen();
 	void stop_inference();
 	void load_model();

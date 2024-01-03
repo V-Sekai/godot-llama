@@ -168,16 +168,6 @@ void TextToText::add_string(const String buffer) {
 	s_mutex.unlock();
 }
 
-/** Get newly transcribed text. */
-std::vector<transcribed_msg> TextToText::get_transcribed() {
-	std::vector<transcribed_msg> transcribed;
-	s_mutex.lock();
-	transcribed = std::move(s_transcribed_msgs);
-	s_transcribed_msgs.clear();
-	s_mutex.unlock();
-	return transcribed;
-}
-
 void TextToText::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_string", "buffer"), &TextToText::add_string);
 	ClassDB::bind_method(D_METHOD("get_language_model"), &TextToText::get_language_model);
