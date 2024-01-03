@@ -162,7 +162,7 @@ private:
 		int32_t max_context_size = 224;
 	};
 	Ref<LlamaResource> model;
-	llama_model * language_model; 
+	llama_model *language_model;
 	llama_model_params params;
 	llama_context_params context_parameters{ true };
 	llama_context *context_instance = nullptr;
