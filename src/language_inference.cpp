@@ -1,4 +1,4 @@
-#include "speech_to_text.h"
+#include "language_inference.h"
 #include <atomic>
 #include <cmath>
 #include <godot_cpp/classes/audio_server.hpp>
@@ -10,15 +10,6 @@
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <string>
 #include <vector>
-
-
-void _vector2_array_to_float_array(const uint32_t &p_mix_frame_count,
-		const Vector2 *p_process_buffer_in,
-		float *p_process_buffer_out) {
-	for (size_t i = 0; i < p_mix_frame_count; i++) {
-		p_process_buffer_out[i] = (p_process_buffer_in[i].x + p_process_buffer_in[i].y) / 2.0;
-	}
-}
 
 SpeechToText *SpeechToText::singleton = nullptr;
 

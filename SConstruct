@@ -23,7 +23,6 @@ env.Append(CPPDEFINES=['WHISPER_SHARED', 'GGML_SHARED'])
 sources = [Glob("src/*.cpp")]
 
 sources.extend([
-    Glob("thirdparty/libsamplerate/src/*.c"),
     "thirdparty/llama.cpp/llama.cpp",
     "thirdparty/llama.cpp/ggml-alloc.c",
     "thirdparty/llama.cpp/ggml-backend.c",

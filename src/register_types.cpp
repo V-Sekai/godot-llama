@@ -2,7 +2,7 @@
 
 #include "resource_loader_whisper.h"
 #include "resource_whisper.h"
-#include "speech_to_text.h"
+#include "language_inference.h"
 
 #include <godot_cpp/classes/resource_loader.hpp>
 
@@ -10,7 +10,7 @@ static Ref<ResourceFormatLoaderLlama> llama_loader;
 
 static SpeechToText *SpeechToTextPtr;
 
-void initialize_whisper_module(ModuleInitializationLevel p_level) {
+void initialize_llama_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
@@ -24,7 +24,7 @@ void initialize_whisper_module(ModuleInitializationLevel p_level) {
 	Engine::get_singleton()->register_singleton("SpeechToText", SpeechToText::get_singleton());
 }
 
-void uninitialize_whisper_module(ModuleInitializationLevel p_level) {
+void uninitialize_llama_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
@@ -37,11 +37,11 @@ void uninitialize_whisper_module(ModuleInitializationLevel p_level) {
 
 extern "C" {
 
-GDExtensionBool GDE_EXPORT godot_whisper_library_init(const GDExtensionInterfaceGetProcAddress p_get_proc_address, GDExtensionClassLibraryPtr p_library, GDExtensionInitialization *r_initialization) {
+GDExtensionBool GDE_EXPORT godot_llama_library_init(const GDExtensionInterfaceGetProcAddress p_get_proc_address, GDExtensionClassLibraryPtr p_library, GDExtensionInitialization *r_initialization) {
 	godot::GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
 
-	init_obj.register_initializer(initialize_whisper_module);
-	init_obj.register_terminator(uninitialize_whisper_module);
+	init_obj.register_initializer(initialize_llama_module);
+	init_obj.register_terminator(uninitialize_llama_module);
 	init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
 
 	return init_obj.init();

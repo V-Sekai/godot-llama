@@ -188,11 +188,6 @@ public:
 	void run();
 	int t_last_iter;
 
-	// _FORCE_INLINE_ void set_entropy_threshold(float entropy_threshold) { params.entropy_threshold = entropy_threshold; }
-	// _FORCE_INLINE_ float get_entropy_threshold() { return params.entropy_threshold; }
-
-	// _FORCE_INLINE_ void set_max_context_size(int32_t max_context_size) { params.max_context_size = max_context_size; }
-	// _FORCE_INLINE_ int32_t get_max_context_size() { return params.max_context_size; }
 	void add_string(String buffer);
 	std::vector<transcribed_msg> get_transcribed();
 	void start_listen();
