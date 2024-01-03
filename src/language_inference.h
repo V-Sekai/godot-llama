@@ -81,7 +81,6 @@ public:
 	std::vector<transcribed_msg> s_transcribed_msgs;
 	Mutex s_mutex; // for accessing shared variables from both main thread and worker thread
 	Thread worker;
-	void run();
 	int t_last_iter;
 
 	void add_string(String buffer);
