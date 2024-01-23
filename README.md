@@ -4,14 +4,12 @@
 	<a href="https://github.com/V-Sekai/godot-llama/actions/workflows/runner.yml">
         <img src="https://github.com/V-Sekai/godot-llama/actions/workflows/runner.yml/badge.svg?branch=main"
             alt="chat on Discord"></a>
-    <a href="https://github.com/ggerganov/whisper.cpp" alt="Whisper CPP">
-        <img src="https://img.shields.io/badge/WhisperCPP-v1.5.1-%23478cbf?logoColor=white" /></a>
     <a href="https://github.com/godotengine/godot-cpp" alt="Godot Version">
         <img src="https://img.shields.io/badge/Godot-v4.1-%23478cbf?logo=godot-engine&logoColor=white" /></a>
-    <a href="https://github.com/V-Sekai/godot-whisper/graphs/contributors" alt="Contributors">
-        <img src="https://img.shields.io/github/contributors/V-Sekai/godot-whisper" /></a>
-    <a href="https://github.com/V-Sekai/godot-whisper/pulse" alt="Activity">
-        <img src="https://img.shields.io/github/commit-activity/m/V-Sekai/godot-whisper" /></a>
+    <a href="https://github.com/V-Sekai/godot-llama/graphs/contributors" alt="Contributors">
+        <img src="https://img.shields.io/github/contributors/V-Sekai/godot-llama" /></a>
+    <a href="https://github.com/V-Sekai/godot-llama/pulse" alt="Activity">
+        <img src="https://img.shields.io/github/commit-activity/m/V-Sekai/godot-llama" /></a>
     <a href="https://discord.gg/H3s3PD49XC">
         <img src="https://img.shields.io/discord/1138836561102897172?logo=discord"
             alt="Chat on Discord"></a>
@@ -51,8 +49,8 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Ughuuu"><img src="https://avatars.githubusercontent.com/u/2369380?v=4?s=100" width="100px;" alt="Dragos Daian"/><br /><sub><b>Dragos Daian</b></sub></a><br /><a href="https://github.com/V-Sekai/v-sekai.whisper/commits?author=Ughuuu" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://chibifire.com"><img src="https://avatars.githubusercontent.com/u/32321?v=4?s=100" width="100px;" alt="K. S. Ernest (iFire) Lee"/><br /><sub><b>K. S. Ernest (iFire) Lee</b></sub></a><br /><a href="https://github.com/V-Sekai/v-sekai.whisper/commits?author=fire" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Ughuuu"><img src="https://avatars.githubusercontent.com/u/2369380?v=4?s=100" width="100px;" alt="Dragos Daian"/><br /><sub><b>Dragos Daian</b></sub></a><br /><a href="https://github.com/V-Sekai/v-sekai.llama/commits?author=Ughuuu" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://chibifire.com"><img src="https://avatars.githubusercontent.com/u/32321?v=4?s=100" width="100px;" alt="K. S. Ernest (iFire) Lee"/><br /><sub><b>K. S. Ernest (iFire) Lee</b></sub></a><br /><a href="https://github.com/V-Sekai/v-sekai.llama/commits?author=fire" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
