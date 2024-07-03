@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/zeux/volk.git
+	branch = master
+	commit = 692bef4349111d5a1e24fa0fed79eee41496a09f
+	parent = 849033cedd94c1e556c3bd8bec847da18668d65f
+	method = merge
+	cmdver = 0.4.6

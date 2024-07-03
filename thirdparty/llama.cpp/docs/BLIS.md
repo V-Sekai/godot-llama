@@ -23,15 +23,15 @@ Install BLIS:
 sudo make install
 ```
 
-We recommend using openmp since it's easier to modify the cores been used.
+We recommend using openmp since it's easier to modify the cores being used.
 
 ### llama.cpp compilation
 
 Makefile:
 
 ```bash
-make LLAMA_BLIS=1 -j
-# make LLAMA_BLIS=1 benchmark-matmult
+make GGML_BLIS=1 -j
+# make GGML_BLIS=1 llama-benchmark-matmult
 ```
 
 CMake:
@@ -39,7 +39,7 @@ CMake:
 ```bash
 mkdir build
 cd build
-cmake -DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=FLAME ..
+cmake -DGGML_BLAS=ON -DGGML_BLAS_VENDOR=FLAME ..
 make -j
 ```
 

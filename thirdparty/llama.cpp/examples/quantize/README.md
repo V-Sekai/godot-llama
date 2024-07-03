@@ -1,20 +1,22 @@
 # quantize
 
-TODO
+You can also use the [GGUF-my-repo](https://huggingface.co/spaces/ggml-org/gguf-my-repo) space on Hugging Face to build your own quants without any setup.
+
+Note: It is synced from llama.cpp `main` every 6 hours.
 
 ## Llama 2 7B
 
-Quantization | Bits per Weight (BPW)
--- | --
-Q2_K | 3.35
-Q3_K_S | 3.50
-Q3_K_M | 3.91
-Q3_K_L | 4.27
-Q4_K_S | 4.58
-Q4_K_M | 4.84
-Q5_K_S | 5.52
-Q5_K_M | 5.68
-Q6_K | 6.56
+| Quantization | Bits per Weight (BPW) |
+|--------------|-----------------------|
+| Q2_K         | 3.35                  |
+| Q3_K_S       | 3.50                  |
+| Q3_K_M       | 3.91                  |
+| Q3_K_L       | 4.27                  |
+| Q4_K_S       | 4.58                  |
+| Q4_K_M       | 4.84                  |
+| Q5_K_S       | 5.52                  |
+| Q5_K_M       | 5.68                  |
+| Q6_K         | 6.56                  |
 
 ## Llama 2 13B
 Quantization | Bits per Weight (BPW)

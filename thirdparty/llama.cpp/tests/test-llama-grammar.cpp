@@ -105,7 +105,7 @@ int main()
 
     for (auto rule : expected_rules)
     {
-        parsed_grammar.rules.push_back({});
+        parsed_grammar.rules.emplace_back();
         for (auto element : rule)
         {
             parsed_grammar.rules.back().push_back(element);
@@ -116,6 +116,10 @@ int main()
     std::vector<const llama_grammar_element *> grammar_rules(parsed_grammar.c_rules());
     grammar = llama_grammar_init(
         grammar_rules.data(), grammar_rules.size(), parsed_grammar.symbol_ids.at("root"));
+    if (grammar == nullptr)
+    {
+        throw std::runtime_error("Failed to initialize llama_grammar");
+    }
 
     std::vector<std::vector<llama_grammar_element>> expected_stacks = {
         {
@@ -180,8 +184,8 @@ int main()
             if (expected_element.type != element->type || expected_element.value != element->value)
             {
                 fprintf(stderr, "index: %d\n", index);
-                fprintf(stderr, "expected_element: %d, %d\n", expected_element.type, expected_element.value);
-                fprintf(stderr, "actual_element: %d, %d\n", element->type, element->value);
+                fprintf(stderr, "expected_element: %d, %u\n", expected_element.type, expected_element.value);
+                fprintf(stderr, "actual_element: %d, %u\n", element->type, element->value);
                 fprintf(stderr, "expected_element != actual_element\n");
             }
 
@@ -190,7 +194,6 @@ int main()
         index++;
     }
 
-    std::vector<std::vector<const llama_grammar_element *>> next_stacks;
     std::vector<llama_grammar_candidate> next_candidates;
     next_candidates.resize(24);
 

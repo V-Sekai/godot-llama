@@ -65,6 +65,7 @@ struct _NO_DISCARD_ AABB {
 	bool operator!=(const AABB &p_rval) const;
 
 	bool is_equal_approx(const AABB &p_aabb) const;
+	bool is_finite() const;
 	_FORCE_INLINE_ bool intersects(const AABB &p_aabb) const; /// Both AABBs overlap
 	_FORCE_INLINE_ bool intersects_inclusive(const AABB &p_aabb) const; /// Both AABBs (or their faces) overlap
 	_FORCE_INLINE_ bool encloses(const AABB &p_aabb) const; /// p_aabb is completely inside this
@@ -201,11 +202,11 @@ inline bool AABB::encloses(const AABB &p_aabb) const {
 
 	return (
 			(src_min.x <= dst_min.x) &&
-			(src_max.x > dst_max.x) &&
+			(src_max.x >= dst_max.x) &&
 			(src_min.y <= dst_min.y) &&
-			(src_max.y > dst_max.y) &&
+			(src_max.y >= dst_max.y) &&
 			(src_min.z <= dst_min.z) &&
-			(src_max.z > dst_max.z));
+			(src_max.z >= dst_max.z));
 }
 
 Vector3 AABB::get_support(const Vector3 &p_normal) const {

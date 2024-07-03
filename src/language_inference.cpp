@@ -1,5 +1,5 @@
 #include "language_inference.h"
-#include "common/common.h"
+#include "../thirdparty/llama.cpp/common/common.h"
 #include "llama.h"
 
 #include <atomic>
@@ -52,7 +52,7 @@ void TextToText::load_model() {
 	llama_model_params model_params = llama_model_default_params();
 	model_params.n_gpu_layers = 99;
 	language_model = llama_load_model_from_file(model->get_file().utf8().get_data(), model_params);
-	llama_backend_init(OS::get_singleton()->get_processor_count());
+	llama_backend_init();
 
 	context_parameters = llama_context_default_params();
 	context_parameters.seed = 1234;
@@ -134,9 +134,8 @@ void TextToText::add_string(const String buffer) {
 		Vector<char> token_piece;
 		token_piece.resize(128);
 		token_piece.fill(0);
-		llama_token_to_piece(language_model, new_token_id, token_piece.ptrw(), token_piece.size());
 
-		cur_transcribed_msg["text"] = String().utf8(token_piece.ptr());
+		cur_transcribed_msg["text"] = String().utf8(llama_token_to_piece(context_instance, new_token_id).c_str());
 		ret.push_back(cur_transcribed_msg);
 
 		UtilityFunctions::print(String(token_piece.ptr()));

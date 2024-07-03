@@ -4,28 +4,40 @@
 #include "console.h"
 
 #include <cassert>
+#include <codecvt>
 #include <cstdio>
 #include <cstring>
-#include <string>
-#include <codecvt>
-#include <map>
-#include <vector>
 #include <locale>
+#include <string>
+#include <thread>
+#include <vector>
 
 int main(int argc, char **argv) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <vocab-file>\n", argv[0]);
+    if (argc < 2 || argc > 3) {
+        fprintf(stderr, "Usage: %s <vocab-file> [--ignore-merges]\n", argv[0]);
         return 1;
     }
 
     const std::string fname = argv[1];
+    bool ignore_merges = false;
+    if (argc == 3) {
+        if (std::strcmp(argv[2], "--ignore-merges") != 0) {
+            fprintf(stderr, "Usage: %s <vocab-file> [--ignore-merges]\n", argv[0]);
+            return 1;
+        }
+        ignore_merges = true;
+    }
 
     fprintf(stderr, "%s : reading vocab from: '%s'\n", __func__, fname.c_str());
+
+    if (ignore_merges) {
+        fprintf(stderr, "%s : ignoring merges for tokens inside vocab\n", __func__);
+    }
 
     llama_model * model;
     llama_context * ctx;
 
-    llama_backend_init(false);
+    llama_backend_init();
 
     // load the vocab
     {
@@ -64,8 +76,20 @@ int main(int argc, char **argv) {
     for (int i = 0; i < n_vocab; ++i) {
         std::string str = llama_detokenize_bpe(ctx, std::vector<int>(1, i));
         try {
-            auto cps = codepoints_from_utf8(str);
-            std::vector<llama_token> tokens = llama_tokenize(ctx, str, false);
+            auto cps = unicode_cpts_from_utf8(str);
+            std::vector<llama_token> tokens = llama_tokenize(ctx, str, false, true);
+            if (ignore_merges && tokens.size() > 1) {
+                fprintf(stderr,
+                        "%s : error: token %d detokenizes to '%s'(%zu) but "
+                        "tokenization of this to multiple tokens: [",
+                        __func__, i, str.c_str(), str.length());
+                fprintf(stderr, "%d", tokens[0]);
+                for (size_t i = 1; i < tokens.size(); i++) {
+                    fprintf(stderr, ", %d", tokens[i]);
+                }
+                fprintf(stderr, "]\n");
+                return 2;
+            }
             std::string check = llama_detokenize_bpe(ctx, tokens);
             if (check != str) {
                 fprintf(stderr, "%s : error: token %d detokenizes to '%s'(%zu) but tokenization of this detokenizes to '%s'(%zu)\n",
@@ -74,45 +98,46 @@ int main(int argc, char **argv) {
             }
         }
         catch (const std::invalid_argument &) {
-            fprintf(stderr, "%s : info: utf8 conversion %d '%s'\n", __func__, i, str.c_str());
+            //fprintf(stderr, "%s : info: utf8 conversion %d '%s'\n", __func__, i, str.c_str());
         }
     }
 
-    for (uint32_t cp = 0x0000; cp < 0xffff; ++cp) {
-        // NOTE: these exceptions seem to be necessary, because the GPT2 tokenizer doesn't want to interfere with some ASCII control characters
-        if ((cp < 0x03 || cp > 0x05) && cp != 0x0b && cp != 0x11 && (cp < 0x13 || cp > 0x17) && cp != 0x19 && (cp < 0x1c || cp > 0x1e) && (cp < 0xd800 || cp > 0xdfff)) {
-            std::string str = " " + codepoint_to_utf8(cp);
-            std::vector<llama_token> tokens = llama_tokenize(ctx, str, false);
-            std::string check = llama_detokenize_bpe(ctx, tokens);
-            if (str != check) {
-                fprintf(stderr, "%s : error: codepoint %x detokenizes to '%s'(%zu) instead of '%s'(%zu)\n",
-                    __func__, cp, check.c_str(), check.length(), str.c_str(), str.length());
-                return 3;
-            }
+    // unicode
+    {
+        const int nthread = std::thread::hardware_concurrency();
+
+        std::vector<std::thread> threads(nthread);
+
+        for (int i = 0; i < nthread; ++i) {
+            threads[i] = std::thread([i, nthread, ctx]() {
+                for (uint32_t cp = i; cp < 0x0010ffff; cp += nthread) {
+                    if (!( // NOLINT
+                                (cp < 0x03       || cp >  0x05)   && cp != 0x0b && cp != 0x11 &&
+                                (cp < 0x13       || cp >  0x17)   && cp != 0x19 &&
+                                (cp < 0x1c       || cp >  0x1e)   &&
+                                (cp < 0xd800     || cp >  0xdfff) &&
+                                (cp < 0x00040000 || cp >= 0x000e0000)
+                        )) {
+                        continue;
+                    }
+
+                    std::string str = unicode_cpt_to_utf8(cp);
+                    std::vector<llama_token> tokens = llama_tokenize(ctx, str, false);
+                    std::string check = llama_detokenize_bpe(ctx, tokens);
+                    if (cp != 9601 && str != check) {
+                        fprintf(stderr, "error: codepoint %x detokenizes to '%s'(%zu) instead of '%s'(%zu)\n",
+                                cp, check.c_str(), check.length(), str.c_str(), str.length());
+                        std::exit(3);
+                    }
+                }
+            });
+        }
+
+        for (auto & t : threads) {
+            t.join();
         }
     }
-    // Restrict to assigned unicode planes
-    // for (uint32_t cp = 0x10000; cp < 0x0010ffff; ++cp) {
-    for (uint32_t cp = 0x10000; cp < 0x00040000; ++cp) {
-        std::string str = codepoint_to_utf8(cp);
-        std::vector<llama_token> tokens = llama_tokenize(ctx, str, false);
-        std::string check = llama_detokenize_bpe(ctx, tokens);
-        if (str != check) {
-            fprintf(stderr, "%s : error: codepoint %x detokenizes to '%s'(%zu) instead of '%s'(%zu)\n",
-                __func__, cp, check.c_str(), check.length(), str.c_str(), str.length());
-            return 4;
-        }
-    }
-    for (uint32_t cp = 0x000e0000; cp < 0x0010ffff; ++cp) {
-        std::string str = codepoint_to_utf8(cp);
-        std::vector<llama_token> tokens = llama_tokenize(ctx, str, false);
-        std::string check = llama_detokenize_bpe(ctx, tokens);
-        if (str != check) {
-            fprintf(stderr, "%s : error: codepoint %x detokenizes to '%s'(%zu) instead of '%s'(%zu)\n",
-                __func__, cp, check.c_str(), check.length(), str.c_str(), str.length());
-            return 4;
-        }
-    }
+
     llama_free_model(model);
     llama_free(ctx);
 

@@ -12,7 +12,7 @@
 #include <godot_cpp/variant/array.hpp>
 #include <godot_cpp/variant/callable.hpp>
 
-#include <llama.cpp/llama.h>
+#include <llama.h>
 
 #include <atomic>
 #include <string>

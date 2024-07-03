@@ -37,7 +37,8 @@ struct ngram_container {
 int main(int argc, char ** argv) {
     gpt_params params;
 
-    if (gpt_params_parse(argc, argv, params) == false) {
+    if (!gpt_params_parse(argc, argv, params)) {
+        gpt_params_print_usage(argc, argv, params);
         return 1;
     }
 
@@ -54,7 +55,8 @@ int main(int argc, char ** argv) {
 #endif // LOG_DISABLE_LOGS
 
     // init llama.cpp
-    llama_backend_init(params.numa);
+    llama_backend_init();
+    llama_numa_init(params.numa);
 
     llama_model * model = NULL;
     llama_context * ctx = NULL;
@@ -63,13 +65,10 @@ int main(int argc, char ** argv) {
     std::tie(model, ctx) = llama_init_from_gpt_params(params);
 
     // Tokenize the prompt
-    const bool add_bos = llama_should_add_bos_token(model);
-    LOG("add_bos tgt: %d\n", add_bos);
-
     std::vector<llama_token> inp;
     std::vector<llama_token> all;
 
-    inp = ::llama_tokenize(ctx, params.prompt, add_bos, true);
+    inp = ::llama_tokenize(ctx, params.prompt, true, true);
     all = inp;
 
     const int max_context_size     = llama_n_ctx(ctx);
@@ -176,7 +175,7 @@ int main(int argc, char ** argv) {
         // debug
         if (dump_kv_cache) {
             llama_kv_cache_view_update(ctx, &kvc_view);
-            dump_kv_cache_view_seqs(kvc_view, 40);
+            llama_kv_cache_dump_view_seqs(kvc_view, 40);
         }
 
         // build the mask from https://lmsys.org/blog/2023-11-21-lookahead-decoding/
@@ -301,7 +300,7 @@ int main(int argc, char ** argv) {
                 }
                 fflush(stdout);
 
-                if (id == llama_token_eos(model)) {
+                if (llama_token_is_eog(model, id)) {
                     has_eos = true;
                 }
 

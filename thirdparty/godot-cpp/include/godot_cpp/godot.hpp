@@ -123,6 +123,8 @@ extern "C" GDExtensionInterfaceStringOperatorPlusEqChar gdextension_interface_st
 extern "C" GDExtensionInterfaceStringOperatorPlusEqCstr gdextension_interface_string_operator_plus_eq_cstr;
 extern "C" GDExtensionInterfaceStringOperatorPlusEqWcstr gdextension_interface_string_operator_plus_eq_wcstr;
 extern "C" GDExtensionInterfaceStringOperatorPlusEqC32str gdextension_interface_string_operator_plus_eq_c32str;
+extern "C" GDExtensionInterfaceStringResize gdextension_interface_string_resize;
+extern "C" GDExtensionInterfaceStringNameNewWithLatin1Chars gdextension_interface_string_name_new_with_latin1_chars;
 extern "C" GDExtensionInterfaceXmlParserOpenBuffer gdextension_interface_xml_parser_open_buffer;
 extern "C" GDExtensionInterfaceFileAccessStoreBuffer gdextension_interface_file_access_store_buffer;
 extern "C" GDExtensionInterfaceFileAccessGetBuffer gdextension_interface_file_access_get_buffer;
@@ -158,21 +160,27 @@ extern "C" GDExtensionInterfaceObjectDestroy gdextension_interface_object_destro
 extern "C" GDExtensionInterfaceGlobalGetSingleton gdextension_interface_global_get_singleton;
 extern "C" GDExtensionInterfaceObjectGetInstanceBinding gdextension_interface_object_get_instance_binding;
 extern "C" GDExtensionInterfaceObjectSetInstanceBinding gdextension_interface_object_set_instance_binding;
+extern "C" GDExtensionInterfaceObjectFreeInstanceBinding gdextension_interface_object_free_instance_binding;
 extern "C" GDExtensionInterfaceObjectSetInstance gdextension_interface_object_set_instance;
 extern "C" GDExtensionInterfaceObjectGetClassName gdextension_interface_object_get_class_name;
 extern "C" GDExtensionInterfaceObjectCastTo gdextension_interface_object_cast_to;
 extern "C" GDExtensionInterfaceObjectGetInstanceFromId gdextension_interface_object_get_instance_from_id;
 extern "C" GDExtensionInterfaceObjectGetInstanceId gdextension_interface_object_get_instance_id;
+extern "C" GDExtensionInterfaceCallableCustomCreate gdextension_interface_callable_custom_create;
+extern "C" GDExtensionInterfaceCallableCustomGetUserData gdextension_interface_callable_custom_get_userdata;
 extern "C" GDExtensionInterfaceRefGetObject gdextension_interface_ref_get_object;
 extern "C" GDExtensionInterfaceRefSetObject gdextension_interface_ref_set_object;
-extern "C" GDExtensionInterfaceScriptInstanceCreate gdextension_interface_script_instance_create;
+extern "C" GDExtensionInterfaceScriptInstanceCreate2 gdextension_interface_script_instance_create2;
+extern "C" GDExtensionInterfacePlaceHolderScriptInstanceCreate gdextension_interface_placeholder_script_instance_create;
+extern "C" GDExtensionInterfacePlaceHolderScriptInstanceUpdate gdextension_interface_placeholder_script_instance_update;
 extern "C" GDExtensionInterfaceClassdbConstructObject gdextension_interface_classdb_construct_object;
 extern "C" GDExtensionInterfaceClassdbGetMethodBind gdextension_interface_classdb_get_method_bind;
 extern "C" GDExtensionInterfaceClassdbGetClassTag gdextension_interface_classdb_get_class_tag;
-extern "C" GDExtensionInterfaceClassdbRegisterExtensionClass gdextension_interface_classdb_register_extension_class;
+extern "C" GDExtensionInterfaceClassdbRegisterExtensionClass2 gdextension_interface_classdb_register_extension_class2;
 extern "C" GDExtensionInterfaceClassdbRegisterExtensionClassMethod gdextension_interface_classdb_register_extension_class_method;
 extern "C" GDExtensionInterfaceClassdbRegisterExtensionClassIntegerConstant gdextension_interface_classdb_register_extension_class_integer_constant;
 extern "C" GDExtensionInterfaceClassdbRegisterExtensionClassProperty gdextension_interface_classdb_register_extension_class_property;
+extern "C" GDExtensionInterfaceClassdbRegisterExtensionClassPropertyIndexed gdextension_interface_classdb_register_extension_class_property_indexed;
 extern "C" GDExtensionInterfaceClassdbRegisterExtensionClassPropertyGroup gdextension_interface_classdb_register_extension_class_property_group;
 extern "C" GDExtensionInterfaceClassdbRegisterExtensionClassPropertySubgroup gdextension_interface_classdb_register_extension_class_property_subgroup;
 extern "C" GDExtensionInterfaceClassdbRegisterExtensionClassSignal gdextension_interface_classdb_register_extension_class_signal;
@@ -187,26 +195,44 @@ enum ModuleInitializationLevel {
 	MODULE_INITIALIZATION_LEVEL_CORE = GDEXTENSION_INITIALIZATION_CORE,
 	MODULE_INITIALIZATION_LEVEL_SERVERS = GDEXTENSION_INITIALIZATION_SERVERS,
 	MODULE_INITIALIZATION_LEVEL_SCENE = GDEXTENSION_INITIALIZATION_SCENE,
-	MODULE_INITIALIZATION_LEVEL_EDITOR = GDEXTENSION_INITIALIZATION_EDITOR
+	MODULE_INITIALIZATION_LEVEL_EDITOR = GDEXTENSION_INITIALIZATION_EDITOR,
+	MODULE_INITIALIZATION_LEVEL_MAX
 };
 
 class GDExtensionBinding {
 public:
 	using Callback = void (*)(ModuleInitializationLevel p_level);
 
-	static Callback init_callback;
-	static Callback terminate_callback;
-	static GDExtensionInitializationLevel minimum_initialization_level;
-	static GDExtensionBool init(GDExtensionInterfaceGetProcAddress p_get_proc_address, GDExtensionClassLibraryPtr p_library, GDExtensionInitialization *r_initialization);
+	struct InitData {
+		GDExtensionInitializationLevel minimum_initialization_level = GDEXTENSION_INITIALIZATION_CORE;
+		Callback init_callback = nullptr;
+		Callback terminate_callback = nullptr;
+	};
+
+	class InitDataList {
+		int data_count = 0;
+		int data_capacity = 0;
+		InitData **data = nullptr;
+
+	public:
+		void add(InitData *p_cb);
+		~InitDataList();
+	};
+
+	static bool api_initialized;
+	static int level_initialized[MODULE_INITIALIZATION_LEVEL_MAX];
+	static InitDataList initdata;
+	static GDExtensionBool init(GDExtensionInterfaceGetProcAddress p_get_proc_address, GDExtensionClassLibraryPtr p_library, InitData *p_init_data, GDExtensionInitialization *r_initialization);
 
 public:
-	static void initialize_level(void *userdata, GDExtensionInitializationLevel p_level);
-	static void deinitialize_level(void *userdata, GDExtensionInitializationLevel p_level);
+	static void initialize_level(void *p_userdata, GDExtensionInitializationLevel p_level);
+	static void deinitialize_level(void *p_userdata, GDExtensionInitializationLevel p_level);
 
 	class InitObject {
 		GDExtensionInterfaceGetProcAddress get_proc_address;
 		GDExtensionClassLibraryPtr library;
 		GDExtensionInitialization *initialization;
+		mutable InitData *init_data = nullptr;
 
 	public:
 		InitObject(GDExtensionInterfaceGetProcAddress p_get_proc_address, GDExtensionClassLibraryPtr p_library, GDExtensionInitialization *r_initialization);

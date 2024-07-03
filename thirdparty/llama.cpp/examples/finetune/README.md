@@ -7,7 +7,7 @@ Basic usage instructions:
 wget https://raw.githubusercontent.com/brunoklein99/deep-learning-notes/master/shakespeare.txt
 
 # finetune LORA adapter
-./bin/finetune \
+./bin/llama-finetune \
         --model-base open-llama-3b-v2-q8_0.gguf \
         --checkpoint-in  chk-lora-open-llama-3b-v2-q8_0-shakespeare-LATEST.gguf \
         --checkpoint-out chk-lora-open-llama-3b-v2-q8_0-shakespeare-ITERATION.gguf \
@@ -18,7 +18,7 @@ wget https://raw.githubusercontent.com/brunoklein99/deep-learning-notes/master/s
         --use-checkpointing
 
 # predict
-./bin/main -m open-llama-3b-v2-q8_0.gguf --lora lora-open-llama-3b-v2-q8_0-shakespeare-LATEST.bin
+./bin/llama-cli -m open-llama-3b-v2-q8_0.gguf --lora lora-open-llama-3b-v2-q8_0-shakespeare-LATEST.bin
 ```
 
 **Only llama based models are supported!** The output files will be saved every N iterations (config with `--save-every N`).
@@ -38,14 +38,14 @@ After 10 more iterations:
 Checkpoint files (`--checkpoint-in FN`, `--checkpoint-out FN`) store the training process. When the input checkpoint file does not exist, it will begin finetuning a new randomly initialized adapter.
 
 llama.cpp compatible LORA adapters will be saved with filename specified by `--lora-out FN`.
-These LORA adapters can then be used by `main` together with the base model, like in the 'predict' example command above.
+These LORA adapters can then be used by `llama-cli` together with the base model, like in the 'predict' example command above.
 
-In `main` you can also load multiple LORA adapters, which will then be mixed together.
+In `llama-cli` you can also load multiple LORA adapters, which will then be mixed together.
 
 For example if you have two LORA adapters `lora-open-llama-3b-v2-q8_0-shakespeare-LATEST.bin` and `lora-open-llama-3b-v2-q8_0-bible-LATEST.bin`, you can mix them together like this:
 
 ```bash
-./bin/main -m open-llama-3b-v2-q8_0.gguf \
+./bin/llama-cli -m open-llama-3b-v2-q8_0.gguf \
   --lora lora-open-llama-3b-v2-q8_0-shakespeare-LATEST.bin \
   --lora lora-open-llama-3b-v2-q8_0-bible-LATEST.bin
 ```
@@ -55,7 +55,7 @@ You can change how strong each LORA adapter is applied to the base model by usin
 For example to apply 40% of the 'shakespeare' LORA adapter, 80% of the 'bible' LORA adapter and 100% of yet another one:
 
 ```bash
-./bin/main -m open-llama-3b-v2-q8_0.gguf \
+./bin/llama-cli -m open-llama-3b-v2-q8_0.gguf \
   --lora-scaled lora-open-llama-3b-v2-q8_0-shakespeare-LATEST.bin 0.4 \
   --lora-scaled lora-open-llama-3b-v2-q8_0-bible-LATEST.bin 0.8 \
   --lora lora-open-llama-3b-v2-q8_0-yet-another-one-LATEST.bin
@@ -80,9 +80,9 @@ The LORA rank can be configured for each model tensor type separately with these
   --rank-wk N                LORA rank for wk tensor (default 4)
   --rank-wv N                LORA rank for wv tensor (default 4)
   --rank-wo N                LORA rank for wo tensor (default 4)
-  --rank-w1 N                LORA rank for w1 tensor (default 4)
-  --rank-w2 N                LORA rank for w2 tensor (default 4)
-  --rank-w3 N                LORA rank for w3 tensor (default 4)
+  --rank-ffn_gate N          LORA rank for ffn_gate tensor (default 4)
+  --rank-ffn_down N          LORA rank for ffn_down tensor (default 4)
+  --rank-ffn_up N            LORA rank for ffn_up tensor (default 4)
 ```
 
 The LORA rank of 'norm' tensors should always be 1.
