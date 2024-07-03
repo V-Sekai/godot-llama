@@ -77,14 +77,14 @@ else:
     
 if env["platform"] == "macos":
 	library = env.SharedLibrary(
-		"bin/addons/godot_llama/bin/libgodot_llama{}.framework/libgodot_llama{}".format(
+		"demo/addons/godot_llama/bin/libgodot_llama{}.framework/libgodot_llama{}".format(
 			env["suffix"], env["suffix"]
 		),
 		source=sources,
 	)
 else:
 	library = env.SharedLibrary(
-		"bin/addons/godot_llama/bin/libgodot_llama{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
+		"demo/addons/godot_llama/bin/libgodot_llama{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
 		source=sources,
 	)
 Default(library)
