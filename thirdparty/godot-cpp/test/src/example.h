@@ -35,9 +35,12 @@ private:
 	static int last_id;
 
 	int id;
+	bool post_initialized = false;
 
 protected:
 	static void _bind_methods();
+
+	void _notification(int p_what);
 
 public:
 	ExampleRef();
@@ -45,6 +48,8 @@ public:
 
 	void set_id(int p_id);
 	int get_id() const;
+
+	bool was_post_initialized() const { return post_initialized; }
 };
 
 class ExampleMin : public Control {
@@ -66,6 +71,7 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	bool _property_can_revert(const StringName &p_name) const;
 	bool _property_get_revert(const StringName &p_name, Variant &r_property) const;
+	void _validate_property(PropertyInfo &p_property) const;
 
 	String _to_string() const;
 
@@ -121,7 +127,9 @@ public:
 	String test_string_ops() const;
 	String test_str_utility() const;
 	bool test_string_is_fourty_two(const String &p_str) const;
+	String test_string_resize(String p_original) const;
 	int test_vector_ops() const;
+	int test_vector_init_list() const;
 
 	bool test_object_cast_to_node(Object *p_object) const;
 	bool test_object_cast_to_control(Object *p_object) const;
@@ -136,17 +144,36 @@ public:
 
 	Variant test_variant_call(Variant p_variant);
 
+	Callable test_callable_mp();
+	Callable test_callable_mp_ret();
+	Callable test_callable_mp_retc() const;
+	Callable test_callable_mp_static() const;
+	Callable test_callable_mp_static_ret() const;
+	Callable test_custom_callable() const;
+
+	void unbound_method1(Object *p_object, String p_string, int p_int);
+	String unbound_method2(Object *p_object, String p_string, int p_int);
+	String unbound_method3(Object *p_object, String p_string, int p_int) const;
+	static void unbound_static_method1(Example *p_object, String p_string, int p_int);
+	static String unbound_static_method2(Object *p_object, String p_string, int p_int);
+
 	BitField<Flags> test_bitfield(BitField<Flags> flags);
+
+	Variant test_variant_iterator(const Variant &p_input);
 
 	// RPC
 	void test_rpc(int p_value);
 	void test_send_rpc(int p_value);
 	int return_last_rpc_arg();
 
+	void callable_bind();
+
 	// Property.
 	void set_custom_position(const Vector2 &pos);
 	Vector2 get_custom_position() const;
 	Vector4 get_v4() const;
+
+	bool test_post_initialize() const;
 
 	// Static method.
 	static int test_static(int p_a, int p_b);
@@ -155,6 +182,8 @@ public:
 	// Virtual function override (no need to bind manually).
 	virtual bool _has_point(const Vector2 &point) const override;
 	virtual void _input(const Ref<InputEvent> &event) override;
+
+	String test_use_engine_singleton() const;
 };
 
 VARIANT_ENUM_CAST(Example::Constants);
@@ -172,11 +201,47 @@ protected:
 	static void _bind_methods() {}
 };
 
-class ExampleAbstract : public Object {
-	GDCLASS(ExampleAbstract, Object);
+class ExampleAbstractBase : public Object {
+	GDCLASS(ExampleAbstractBase, Object);
 
 protected:
 	static void _bind_methods() {}
+
+	virtual int test_function() = 0;
+};
+
+class ExampleConcrete : public ExampleAbstractBase {
+	GDCLASS(ExampleConcrete, ExampleAbstractBase);
+
+protected:
+	static void _bind_methods() {}
+
+	virtual int test_function() override { return 25; }
+};
+
+class ExampleBase : public Node {
+	GDCLASS(ExampleBase, Node);
+
+protected:
+	int value1 = 0;
+	int value2 = 0;
+
+	static void _bind_methods();
+
+	void _notification(int p_what);
+
+public:
+	int get_value1() { return value1; }
+	int get_value2() { return value2; }
+};
+
+class ExampleChild : public ExampleBase {
+	GDCLASS(ExampleChild, ExampleBase);
+
+protected:
+	static void _bind_methods() {}
+
+	void _notification(int p_what);
 };
 
 #endif // EXAMPLE_CLASS_H

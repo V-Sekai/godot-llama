@@ -1,8 +1,5 @@
 import Foundation
-
-// To use this in your own project, add llama.cpp as a swift package dependency
-// and uncomment this import line.
-// import llama
+import llama
 
 enum LlamaError: Error {
     case couldNotInitializeContext
@@ -54,7 +51,7 @@ actor LlamaContext {
     }
 
     static func create_context(path: String) throws -> LlamaContext {
-        llama_backend_init(false)
+        llama_backend_init()
         var model_params = llama_model_default_params()
 
 #if targetEnvironment(simulator)
@@ -161,7 +158,7 @@ actor LlamaContext {
             new_token_id = llama_sample_token_greedy(context, &candidates_p)
         }
 
-        if new_token_id == llama_token_eos(context) || n_cur == n_len {
+        if llama_token_is_eog(model, new_token_id) || n_cur == n_len {
             print("\n")
             let new_token_str = String(cString: temporary_invalid_cchars + [0])
             temporary_invalid_cchars.removeAll()
@@ -224,6 +221,7 @@ actor LlamaContext {
             if llama_decode(context, batch) != 0 {
                 print("llama_decode() failed during prompt")
             }
+            llama_synchronize(context)
 
             let t_pp_end = ggml_time_us()
 
@@ -243,6 +241,7 @@ actor LlamaContext {
                 if llama_decode(context, batch) != 0 {
                     print("llama_decode() failed during text generation")
                 }
+                llama_synchronize(context)
             }
 
             let t_tg_end = ggml_time_us()
@@ -323,7 +322,7 @@ actor LlamaContext {
         defer {
             result.deallocate()
         }
-        let nTokens = llama_token_to_piece(model, token, result, 8)
+        let nTokens = llama_token_to_piece(model, token, result, 8, false)
 
         if nTokens < 0 {
             let newResult = UnsafeMutablePointer<Int8>.allocate(capacity: Int(-nTokens))
@@ -331,7 +330,7 @@ actor LlamaContext {
             defer {
                 newResult.deallocate()
             }
-            let nNewTokens = llama_token_to_piece(model, token, newResult, -nTokens)
+            let nNewTokens = llama_token_to_piece(model, token, newResult, -nTokens, false)
             let bufferPointer = UnsafeBufferPointer(start: newResult, count: Int(nNewTokens))
             return Array(bufferPointer)
         } else {

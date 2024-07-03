@@ -42,6 +42,8 @@ namespace godot {
 std::unordered_map<StringName, ClassDB::ClassInfo> ClassDB::classes;
 std::unordered_map<StringName, const GDExtensionInstanceBindingCallbacks *> ClassDB::instance_binding_callbacks;
 std::vector<StringName> ClassDB::class_register_order;
+std::unordered_map<StringName, Object *> ClassDB::engine_singletons;
+std::mutex ClassDB::engine_singletons_mutex;
 GDExtensionInitializationLevel ClassDB::current_level = GDEXTENSION_INITIALIZATION_CORE;
 
 MethodDefinition D_METHOD(StringName p_name) {
@@ -105,15 +107,7 @@ void ClassDB::add_property(const StringName &p_class, const PropertyInfo &p_pinf
 		p_pinfo.usage, // DEFAULT //uint32_t usage;
 	};
 
-	PropertySetGet setget;
-	setget.setter = p_setter;
-	setget.getter = p_getter;
-	setget._setptr = setter;
-	setget._getptr = getter;
-	setget.index = p_index;
-	setget.type = p_pinfo.type;
-
-	internal::gdextension_interface_classdb_register_extension_class_property(internal::library, info.name._native_ptr(), &prop_info, setget.setter._native_ptr(), setget.getter._native_ptr());
+	internal::gdextension_interface_classdb_register_extension_class_property_indexed(internal::library, info.name._native_ptr(), &prop_info, p_setter._native_ptr(), p_getter._native_ptr(), p_index);
 }
 
 MethodBind *ClassDB::get_method(const StringName &p_class, const StringName &p_method) {
@@ -360,6 +354,7 @@ void ClassDB::initialize(GDExtensionInitializationLevel p_level) {
 }
 
 void ClassDB::deinitialize(GDExtensionInitializationLevel p_level) {
+	std::set<StringName> to_erase;
 	for (std::vector<StringName>::reverse_iterator i = class_register_order.rbegin(); i != class_register_order.rend(); ++i) {
 		const StringName &name = *i;
 		const ClassInfo &cl = classes[name];
@@ -370,8 +365,35 @@ void ClassDB::deinitialize(GDExtensionInitializationLevel p_level) {
 
 		internal::gdextension_interface_classdb_unregister_extension_class(internal::library, name._native_ptr());
 
-		for (auto method : cl.method_map) {
+		for (const std::pair<const StringName, MethodBind *> &method : cl.method_map) {
 			memdelete(method.second);
+		}
+
+		classes.erase(name);
+		to_erase.insert(name);
+	}
+
+	{
+		// The following is equivalent to c++20 `std::erase_if(class_register_order, [&](const StringName& name){ return to_erase.contains(name); });`
+		std::vector<StringName>::iterator it = std::remove_if(class_register_order.begin(), class_register_order.end(), [&](const StringName &p_name) {
+			return to_erase.count(p_name) > 0;
+		});
+		class_register_order.erase(it, class_register_order.end());
+	}
+
+	if (p_level == GDEXTENSION_INITIALIZATION_CORE) {
+		// Make a new list of the singleton objects, since freeing the instance bindings will lead to
+		// elements getting removed from engine_singletons.
+		std::vector<Object *> singleton_objects;
+		{
+			std::lock_guard<std::mutex> lock(engine_singletons_mutex);
+			singleton_objects.reserve(engine_singletons.size());
+			for (const std::pair<const StringName, Object *> &pair : engine_singletons) {
+				singleton_objects.push_back(pair.second);
+			}
+		}
+		for (std::vector<Object *>::iterator i = singleton_objects.begin(); i != singleton_objects.end(); i++) {
+			internal::gdextension_interface_object_free_instance_binding((*i)->_owner, internal::token);
 		}
 	}
 }

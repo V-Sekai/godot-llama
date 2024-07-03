@@ -16,19 +16,31 @@ env.Append(
     ]
 )
 
-env.Prepend(CPPPATH=["thirdparty", "include", "thirdparty/llama.cpp"])
-env.Append(CPPPATH=["src/"])
+env.Prepend(CPPPATH=["thirdparty", "include", "thirdparty/llama.cpp/include", "thirdparty/llama.cpp/ggml/include"])
+env.Append(CPPPATH=["src"])
 env.Append(CPPDEFINES=['WHISPER_SHARED', 'GGML_SHARED'])
 sources = [Glob("src/*.cpp")]
-
 sources.extend([
-    "thirdparty/llama.cpp/llama.cpp",
+    "thirdparty/llama.cpp/src/llama.cpp",
+    "thirdparty/llama.cpp/src/unicode.cpp",
+    "thirdparty/llama.cpp/src/unicode-data.cpp",
     "thirdparty/llama.cpp/common/common.cpp",
-    "thirdparty/llama.cpp/ggml-alloc.c",
-    "thirdparty/llama.cpp/ggml-backend.c",
-    "thirdparty/llama.cpp/ggml.c",
-    "thirdparty/llama.cpp/ggml-quants.c",
+    "thirdparty/llama.cpp/common/grammar-parser.cpp",
+    "thirdparty/llama.cpp/common/json-schema-to-grammar.cpp",
+    "thirdparty/llama.cpp/common/console.cpp",
+    "thirdparty/llama.cpp/common/ngram-cache.cpp",
+    "thirdparty/llama.cpp/common/sampling.cpp",
+    "thirdparty/llama.cpp/common/train.cpp",
+    "thirdparty/llama.cpp/ggml/src/ggml-alloc.c",
+    "thirdparty/llama.cpp/ggml/src/ggml-backend.c",
+    "thirdparty/llama.cpp/ggml/src/ggml.c",
+    "thirdparty/llama.cpp/ggml/src/ggml-quants.c",
 ])
+
+if env["platform"] == "windows":
+    env.Append(CPPFLAGS=["/EHsc"])
+else:
+    env.Append(CPPFLAGS=["-fexceptions"])
 
 if env["platform"] == "macos" or env["platform"] == "ios":
     env.Append(LINKFLAGS=["-framework"])
@@ -48,69 +60,21 @@ if env["platform"] == "macos" or env["platform"] == "ios":
         ]
     )
     sources.extend([
-        Glob("thirdparty/llama.cpp/ggml-metal.m"),
+        Glob("thirdparty/llama.cpp/ggml/src/ggml-metal.m"),
     ])
 else:
-    # CBlast and OpenCL only on non apple platform
     sources.extend([
-        "thirdparty/llama.cpp/ggml-opencl.cpp",
+        "thirdparty/llama.cpp/ggml/src/ggml-vulkan.cpp",
+        "thirdparty/volk/volk.c",
     ])
-
-    env.Prepend(CPPPATH=["thirdparty/opencl_headers", "thirdparty/clblast/include", "thirdparty/clblast/src"])
+    env.Append(CPPPATH=["thirdparty/Vulkan-Headers/include", "thirdparty/volk"])
     env.Append(
         CPPDEFINES=[
-        "GGML_USE_CLBLAST",
-        "OPENCL_API",
-        "USE_ICD_LOADER",
+        "GGML_USE_VULKAN",
         ]
     )
-    opencl_include_dir = os.environ.get('OpenCL_INCLUDE_DIR')
-    if opencl_include_dir:
-        env.Append(CPPDEFINES=[opencl_include_dir])
 
-    opencl_library = os.environ.get('OpenCL_LIBRARY')
-    if opencl_library:
-        env.Append(LIBS=[opencl_library])
-
-    clblast_sources = [
-        "thirdparty/clblast/src/database/database.cpp",
-        "thirdparty/clblast/src/routines/common.cpp",
-        "thirdparty/clblast/src/utilities/compile.cpp",
-        "thirdparty/clblast/src/utilities/clblast_exceptions.cpp",
-        "thirdparty/clblast/src/utilities/timing.cpp",
-        "thirdparty/clblast/src/utilities/utilities.cpp",
-        "thirdparty/clblast/src/api_common.cpp",
-        "thirdparty/clblast/src/cache.cpp",
-        "thirdparty/clblast/src/kernel_preprocessor.cpp",
-        "thirdparty/clblast/src/routine.cpp",
-        "thirdparty/clblast/src/tuning/configurations.cpp",
-        # OpenCL specific sources
-        "thirdparty/clblast/src/clblast.cpp",
-        "thirdparty/clblast/src/clblast_c.cpp",
-        "thirdparty/clblast/src/tuning/tuning_api.cpp"
-    ]
-
-    databases = ['copy', 'pad', 'padtranspose', 'transpose', 'xaxpy', 'xdot', 
-                'xgemm', 'xgemm_direct', 'xgemv', 'xgemv_fast', 'xgemv_fast_rot', 
-                'xger', 'invert', 'gemm_routine', 'trsv_routine', 'xconvgemm']
-
-    for database in databases:
-        clblast_sources.append('thirdparty/clblast/src/database/kernels/' + database + '/' + database + '.cpp')
-
-    sources.extend(clblast_sources)
-
-    routines = {
-        'level1': Glob("thirdparty/clblast/src/routines/level1/*.cpp"),
-        'level2': Glob("thirdparty/clblast/src/routines/level2/*.cpp"),
-        'level3': Glob("thirdparty/clblast/src/routines/level3/*.cpp"),
-        'levelx': Glob("thirdparty/clblast/src/routines/levelx/*.cpp"),
-    }
-
-    for level, files in routines.items():
-        sources.extend(files)
-
-    sources.extend(Glob("thirdparty/clblast/src/tuners/*.cpp"))
-
+    
 if env["platform"] == "macos":
 	library = env.SharedLibrary(
 		"bin/addons/godot_llama/bin/libgodot_llama{}.framework/libgodot_llama{}".format(

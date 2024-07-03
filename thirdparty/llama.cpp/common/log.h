@@ -211,7 +211,7 @@ inline std::string log_filename_generator_impl(LogTriState multilog, const std::
         #define LOG_FLF_VAL , __FILE__, __LINE__, __FUNCTION__
     #else
         #define LOG_FLF_FMT "[%24s:%5ld][%24s] "
-        #define LOG_FLF_VAL , __FILE__, __LINE__, __FUNCTION__
+        #define LOG_FLF_VAL , __FILE__, (long)__LINE__, __FUNCTION__
     #endif
 #else
     #define LOG_FLF_FMT "%s"
@@ -224,7 +224,7 @@ inline std::string log_filename_generator_impl(LogTriState multilog, const std::
         #define LOG_TEE_FLF_VAL , __FILE__, __LINE__, __FUNCTION__
     #else
         #define LOG_TEE_FLF_FMT "[%24s:%5ld][%24s] "
-        #define LOG_TEE_FLF_VAL , __FILE__, __LINE__, __FUNCTION__
+        #define LOG_TEE_FLF_VAL , __FILE__, (long)__LINE__, __FUNCTION__
     #endif
 #else
     #define LOG_TEE_FLF_FMT "%s"
@@ -234,7 +234,7 @@ inline std::string log_filename_generator_impl(LogTriState multilog, const std::
 // INTERNAL, DO NOT USE
 //  USE LOG() INSTEAD
 //
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || defined(__INTEL_LLVM_COMPILER) || defined(__clang__)
     #define LOG_IMPL(str, ...)                                                                                      \
     do {                                                                                                            \
         if (LOG_TARGET != nullptr)                                                                                  \
@@ -257,7 +257,7 @@ inline std::string log_filename_generator_impl(LogTriState multilog, const std::
 // INTERNAL, DO NOT USE
 //  USE LOG_TEE() INSTEAD
 //
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || defined(__INTEL_LLVM_COMPILER) || defined(__clang__)
     #define LOG_TEE_IMPL(str, ...)                                                                                                      \
     do {                                                                                                                                \
         if (LOG_TARGET != nullptr)                                                                                                      \
@@ -294,10 +294,10 @@ inline std::string log_filename_generator_impl(LogTriState multilog, const std::
 // Main LOG macro.
 //  behaves like printf, and supports arguments the exact same way.
 //
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || defined(__clang__)
     #define LOG(...) LOG_IMPL(__VA_ARGS__, "")
 #else
-    #define LOG(str, ...) LOG_IMPL("%s" str, "", __VA_ARGS__, "")
+    #define LOG(str, ...) LOG_IMPL("%s" str, "", ##__VA_ARGS__, "")
 #endif
 
 // Main TEE macro.
@@ -308,19 +308,19 @@ inline std::string log_filename_generator_impl(LogTriState multilog, const std::
 // Secondary target can be changed just like LOG_TARGET
 //  by defining LOG_TEE_TARGET
 //
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || defined(__clang__)
     #define LOG_TEE(...) LOG_TEE_IMPL(__VA_ARGS__, "")
 #else
-    #define LOG_TEE(str, ...) LOG_TEE_IMPL("%s" str, "", __VA_ARGS__, "")
+    #define LOG_TEE(str, ...) LOG_TEE_IMPL("%s" str, "", ##__VA_ARGS__, "")
 #endif
 
 // LOG macro variants with auto endline.
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || defined(__clang__)
     #define LOGLN(...) LOG_IMPL(__VA_ARGS__, "\n")
     #define LOG_TEELN(...) LOG_TEE_IMPL(__VA_ARGS__, "\n")
 #else
-    #define LOGLN(str, ...) LOG_IMPL("%s" str, "", __VA_ARGS__, "\n")
-    #define LOG_TEELN(str, ...) LOG_TEE_IMPL("%s" str, "", __VA_ARGS__, "\n")
+    #define LOGLN(str, ...) LOG_IMPL("%s" str, "", ##__VA_ARGS__, "\n")
+    #define LOG_TEELN(str, ...) LOG_TEE_IMPL("%s" str, "", ##__VA_ARGS__, "\n")
 #endif
 
 // INTERNAL, DO NOT USE
@@ -566,6 +566,7 @@ inline void log_print_usage()
     printf("  --log-new             Create a separate new log file on start. "
                                    "Each log file will have unique name: \"<name>.<ID>.log\"\n");
     printf("  --log-append          Don't truncate the old log file.\n");
+    printf("\n");
 }
 
 #define log_dump_cmdline(argc, argv) log_dump_cmdline_impl(argc, argv)

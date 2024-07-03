@@ -37,7 +37,7 @@
 # Todo
 # Test build for Windows, Mac and mingw.
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 project(godot-cpp LANGUAGES CXX)
 
 option(GENERATE_TEMPLATE_GET_NODE "Generate a template version of the Node class's get_node." ON)
@@ -46,11 +46,6 @@ option(GODOT_CPP_WARNING_AS_ERROR "Treat warnings as errors" OFF)
 
 # Add path to modules
 list( APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/" )
-
-# Check if we are building ourself or being included
-if(${PROJECT_NAME} STREQUAL ${CMAKE_PROJECT_NAME})
-    set(GODOT_CPP_BUILDING_SELF ON)
-endif()
 
 # Set some helper variables for readability
 set( compiler_is_clang "$<OR:$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:Clang>>" )
@@ -99,10 +94,8 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 
 	add_definitions(-DNOMINMAX)
 else()  # GCC/Clang
-	set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -g")
-
 	if(CMAKE_BUILD_TYPE MATCHES Debug)
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -fno-omit-frame-pointer -O0")
+		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -fno-omit-frame-pointer -O0 -g")
 	else()
 		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -O3")
 	endif(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -110,7 +103,7 @@ endif()
 
 # Disable exception handling. Godot doesn't use exceptions anywhere, and this
 # saves around 20% of binary size and very significant build time (GH-80513).
-option(GODOT_DISABLE_EXCEPTIONS OFF "Force disabling exception handling code")
+option(GODOT_DISABLE_EXCEPTIONS ON "Force disabling exception handling code")
 if (GODOT_DISABLE_EXCEPTIONS)
 	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -D_HAS_EXCEPTIONS=0")
@@ -134,6 +127,7 @@ endif()
 execute_process(COMMAND "${Python3_EXECUTABLE}" "-c" "import binding_generator; binding_generator.print_file_list(\"${GODOT_GDEXTENSION_API_FILE}\", \"${CMAKE_CURRENT_BINARY_DIR}\", headers=True, sources=True)"
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	OUTPUT_VARIABLE GENERATED_FILES_LIST
+	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
 add_custom_command(OUTPUT ${GENERATED_FILES_LIST}
@@ -158,12 +152,6 @@ add_library(${PROJECT_NAME} STATIC
 add_library(godot::cpp ALIAS ${PROJECT_NAME})
 
 include(GodotCompilerWarnings)
-
-# Treat warnings as errors if we are building ourself
-if(GODOT_CPP_BUILDING_SELF)
-    unset( GODOT_CPP_WARNING_AS_ERROR CACHE )
-    set_warning_as_error()
-endif()
 
 target_compile_features(${PROJECT_NAME}
 	PRIVATE
