@@ -51,7 +51,11 @@ void TextToText::load_model() {
 	}
 	llama_model_params model_params = llama_model_default_params();
 	model_params.n_gpu_layers = 99;
-	language_model = llama_load_model_from_file(model->get_file().utf8().get_data(), model_params);
+	ERR_PRINT(model->get_file());
+	String model_path = model->get_file();
+	model_path = ProjectSettings::get_singleton()->globalize_path(model_path);
+	ERR_PRINT(model_path);
+	language_model = llama_load_model_from_file(model_path.utf8().get_data(), model_params);
 	llama_backend_init();
 
 	context_parameters = llama_context_default_params();
@@ -71,99 +75,227 @@ TextToText::~TextToText() {
 }
 
 void TextToText::add_string(const String buffer) {
-	s_mutex.lock();
-	const int32_t total_length_of_sequence_with_prompt = 512;
-	std::vector<llama_token> tokens_list(total_length_of_sequence_with_prompt);
-	const String prompt = "Hello my name is";
-	int32_t n_tokens = llama_tokenize(language_model, prompt.utf8().get_data(), buffer.utf8().size(), tokens_list.data(), total_length_of_sequence_with_prompt, true, false);
-	if (n_tokens < 0) {
-		s_mutex.unlock();
-		ERR_PRINT("Error: Tokenization failed due to insufficient token space.");
+	if (model.is_null()) {
 		return;
 	}
-	n_tokens = llama_tokenize(language_model, buffer.utf8().get_data(), buffer.utf8().size(), tokens_list.data(), total_length_of_sequence_with_prompt, false /* no BOS */, false /* not special */);
-	if (n_tokens < 0) {
-		s_mutex.unlock();
-		ERR_PRINT("Error: Tokenization failed due to insufficient token space.");
+	PackedByteArray data = model->get_content();
+	if (data.is_empty()) {
 		return;
 	}
+    gpt_params params;
 
-	tokens_list.resize(n_tokens); // Adjust the size based on the actual number of tokens.
+    params.prompt = buffer.utf8().get_data();
+    params.n_predict = 32;
 
-	llama_batch new_inference_batch = llama_batch_init(n_tokens, 0, 1);
+	context_parameters = llama_context_default_params();
+	context_parameters.seed = 1234;
+	context_parameters.n_ctx = 4096;
+	context_parameters.n_threads = OS::get_singleton()->get_processor_count();
+	context_parameters.n_threads_batch = context_parameters.n_threads;
 
-	for (int i = 0; i < n_tokens; ++i) {
-		llama_batch_add(new_inference_batch, tokens_list[i], i, { 0 }, false);
-	}
+	context_instance = llama_new_context_with_model(language_model, context_parameters);
+	UtilityFunctions::print(llama_print_system_info());
 
-	new_inference_batch.logits[new_inference_batch.n_tokens - 1] = true;
+    // number of parallel batches
+    int n_parallel = params.n_parallel;
 
-	if (llama_decode(context_instance, new_inference_batch)) {
-		s_mutex.unlock();
-		ERR_PRINT("Error: Model decoding failed.");
-		return;
-	}
+    // total length of the sequences including the prompt
+    int n_predict = 32;
 
-	int n_cur = new_inference_batch.n_tokens;
-	int n_decode = 0;
+    // init LLM
 
-	const auto t_main_start = ggml_time_us();
+    llama_backend_init();
+    llama_numa_init(params.numa);
 
-	Array ret;
+    // initialize the model
 
-	while (n_cur <= total_length_of_sequence_with_prompt) {
-		auto n_vocab = llama_n_vocab(language_model);
-		auto *logits = llama_get_logits_ith(context_instance, new_inference_batch.n_tokens - 1);
+    llama_model_params model_params = llama_model_params_from_gpt_params(params);
 
-		std::vector<llama_token_data> candidates;
-		candidates.reserve(n_vocab);
+    llama_model * llama_model = llama_load_model_from_file(model->get_file().utf8().get_data(), model_params);
 
-		for (llama_token token_id = 0; token_id < n_vocab; token_id++) {
-			candidates.emplace_back(llama_token_data{ token_id, logits[token_id], 0.0f });
-		}
+    if (llama_model == NULL) {
+        fprintf(stderr , "%s: error: unable to load model\n" , __func__);
+        return;
+    }
 
-		llama_token_data_array candidates_p = { candidates.data(), candidates.size(), false };
+    // tokenize the prompt
 
-		const llama_token new_token_id = llama_sample_token_greedy(context_instance, &candidates_p);
+    std::vector<llama_token> tokens_list;
+    tokens_list = llama_tokenize(llama_model, params.prompt, true);
 
-		if (new_token_id == llama_token_eos(language_model) || n_cur == total_length_of_sequence_with_prompt) {
-			UtilityFunctions::print(String());
-			break;
-		}
-		Dictionary cur_transcribed_msg;
-		Vector<char> token_piece;
-		token_piece.resize(128);
-		token_piece.fill(0);
+    const int n_kv_req = tokens_list.size() + (n_predict - tokens_list.size())*n_parallel;
 
-		cur_transcribed_msg["text"] = String().utf8(llama_token_to_piece(context_instance, new_token_id).c_str());
-		ret.push_back(cur_transcribed_msg);
+    // initialize the context
 
-		UtilityFunctions::print(String(token_piece.ptr()));
+    llama_context_params ctx_params = llama_context_params_from_gpt_params(params);
 
-		llama_batch_clear(new_inference_batch);
+    ctx_params.n_ctx   = n_kv_req;
+    ctx_params.n_batch = std::max(n_predict, n_parallel);
 
-		llama_batch_add(new_inference_batch, new_token_id, n_cur, { 0 }, true);
+    llama_context * ctx = llama_new_context_with_model(llama_model, ctx_params);
 
-		n_decode += 1;
-		n_cur += 1;
+    if (ctx == NULL) {
+        fprintf(stderr , "%s: error: failed to create the llama_context\n" , __func__);
+        return;
+    }
 
-		if (llama_decode(context_instance, new_inference_batch)) {
-			s_mutex.unlock();
-			ERR_PRINT(vformat("%s : failed to eval, return code %d", __func__, 1));
-			return;
-		}
-	}
+    const int n_ctx = llama_n_ctx(ctx);
 
-	const int64_t t_main_end = ggml_time_us();
+    LOG_TEE("\n%s: n_predict = %d, n_ctx = %d, n_batch = %u, n_parallel = %d, n_kv_req = %d\n", __func__, n_predict, n_ctx, ctx_params.n_batch, n_parallel, n_kv_req);
 
-	UtilityFunctions::print(vformat("%s: decoded %d tokens in %.2f s, speed: %.2f t/s",
-			__func__, n_decode, (t_main_end - t_main_start) / 1000000.0f,
-			n_decode / ((t_main_end - t_main_start) / 1000000.0f)));
+    // make sure the KV cache is big enough to hold all the prompt and generated tokens
+    if (n_kv_req > n_ctx) {
+        LOG_TEE("%s: error: n_kv_req (%d) > n_ctx, the required KV cache size is not big enough\n", __func__,  n_kv_req);
+        LOG_TEE("%s:        either reduce n_parallel or increase n_ctx\n", __func__);
+        return;
+    }
 
-	llama_print_timings(context_instance);
+    // print the prompt token-by-token
 
-	call_deferred("emit_signal", "update_transcribed_msgs", ret);
+    fprintf(stderr, "\n");
 
+    for (auto id : tokens_list) {
+        fprintf(stderr, "%s", llama_token_to_piece(ctx, id).c_str());
+    }
+
+    fflush(stderr);
+
+    // create a llama_batch
+    // we use this object to submit token data for decoding
+    llama_batch batch = llama_batch_init(std::max(tokens_list.size(), (size_t)n_parallel), 0, 1);
+
+    // evaluate the initial prompt
+    for (size_t i = 0; i < tokens_list.size(); ++i) {
+        llama_batch_add(batch, tokens_list[i], i, { 0 }, false);
+    }
+    GGML_ASSERT(batch.n_tokens == (int) tokens_list.size());
+
+    // llama_decode will output logits only for the last token of the prompt
+    batch.logits[batch.n_tokens - 1] = true;
+
+    if (llama_decode(ctx, batch) != 0) {
+        LOG_TEE("%s: llama_decode() failed\n", __func__);
+        return;
+    }
+
+    // assign the system KV cache to all parallel sequences
+    // this way, the parallel sequences will "reuse" the prompt tokens without having to copy them
+    for (int32_t i = 1; i < n_parallel; ++i) {
+        llama_kv_cache_seq_cp(ctx, 0, i, -1, -1);
+    }
+
+    if (n_parallel > 1) {
+        LOG_TEE("\n\n%s: generating %d sequences ...\n", __func__, n_parallel);
+    }
+
+    // main loop
+
+    // we will store the parallel decoded sequences in this vector
+    std::vector<std::string> streams(n_parallel);
+
+    // remember the batch index of the last token for each parallel sequence
+    // we need this to determine which logits to sample from
+    std::vector<int32_t> i_batch(n_parallel, batch.n_tokens - 1);
+
+    int n_cur    = batch.n_tokens;
+    int n_decode = 0;
+
+    const auto t_main_start = ggml_time_us();
+
+    while (n_cur <= n_predict) {
+        // prepare the next batch
+        llama_batch_clear(batch);
+
+        // sample the next token for each parallel sequence / stream
+        for (int32_t i = 0; i < n_parallel; ++i) {
+            if (i_batch[i] < 0) {
+                // the stream has already finished
+                continue;
+            }
+
+            auto   n_vocab = llama_n_vocab(llama_model);
+            auto * logits  = llama_get_logits_ith(ctx, i_batch[i]);
+
+            std::vector<llama_token_data> candidates;
+            candidates.reserve(n_vocab);
+
+            for (llama_token token_id = 0; token_id < n_vocab; token_id++) {
+                candidates.emplace_back(llama_token_data{ token_id, logits[token_id], 0.0f });
+            }
+
+            llama_token_data_array candidates_p = { candidates.data(), candidates.size(), false };
+
+            const int   top_k = 40;
+            const float top_p = 0.9f;
+            const float temp  = 0.4f;
+
+            llama_sample_top_k(ctx, &candidates_p, top_k, 1);
+            llama_sample_top_p(ctx, &candidates_p, top_p, 1);
+            llama_sample_temp (ctx, &candidates_p, temp);
+
+            const llama_token new_token_id = llama_sample_token(ctx, &candidates_p);
+
+            //const llama_token new_token_id = llama_sample_token_greedy(ctx, &candidates_p);
+
+            // is it an end of generation? -> mark the stream as finished
+            if (llama_token_is_eog(llama_model, new_token_id) || n_cur == n_predict) {
+                i_batch[i] = -1;
+                LOG_TEE("\n");
+                if (n_parallel > 1) {
+                    LOG_TEE("%s: stream %d finished at n_cur = %d", __func__, i, n_cur);
+                }
+
+                continue;
+            }
+
+            // if there is only one stream, we print immediately to stdout
+            if (n_parallel == 1) {
+                LOG_TEE("%s", llama_token_to_piece(ctx, new_token_id).c_str());
+                fflush(stdout);
+            }
+
+            streams[i] += llama_token_to_piece(ctx, new_token_id);
+
+            i_batch[i] = batch.n_tokens;
+
+            // push this new token for next evaluation
+            llama_batch_add(batch, new_token_id, n_cur, { i }, true);
+
+            n_decode += 1;
+        }
+
+        // all streams are finished
+        if (batch.n_tokens == 0) {
+            break;
+        }
+
+        n_cur += 1;
+
+        // evaluate the current batch with the transformer model
+        if (llama_decode(ctx, batch)) {
+            fprintf(stderr, "%s : failed to eval, return code %d\n", __func__, 1);
+            return;
+        }
+    }
+
+    LOG_TEE("\n");
+
+    if (n_parallel > 1) {
+        LOG_TEE("\n");
+
+        for (int32_t i = 0; i < n_parallel; ++i) {
+            LOG_TEE("sequence %d:\n\n%s%s\n\n", i, params.prompt.c_str(), streams[i].c_str());
+        }
+    }
+
+    const auto t_main_end = ggml_time_us();
+
+    LOG_TEE("%s: decoded %d tokens in %.2f s, speed: %.2f t/s\n",
+            __func__, n_decode, (t_main_end - t_main_start) / 1000000.0f, n_decode / ((t_main_end - t_main_start) / 1000000.0f));
+
+    llama_print_timings(ctx);
+
+    fprintf(stderr, "\n");
 	s_mutex.unlock();
 }
 
@@ -171,9 +303,7 @@ void TextToText::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_string", "buffer"), &TextToText::add_string);
 	ClassDB::bind_method(D_METHOD("get_language_model"), &TextToText::get_language_model);
 	ClassDB::bind_method(D_METHOD("set_language_model", "model"), &TextToText::set_language_model);
-	ClassDB::bind_method(D_METHOD("start_listen"), &TextToText::start_listen);
-	ClassDB::bind_method(D_METHOD("stop_inference"), &TextToText::stop_inference);
-	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "language_model", PROPERTY_HINT_RESOURCE_TYPE, "LlamaResource"), "set_language_model", "get_language_model");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "language_model", PROPERTY_HINT_RESOURCE_TYPE, "GGUFResource"), "set_language_model", "get_language_model");
 
 	ADD_SIGNAL(MethodInfo("update_transcribed_msgs", PropertyInfo(Variant::ARRAY, "transcribed_msgs")));
 

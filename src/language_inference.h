@@ -1,7 +1,7 @@
 #ifndef SPEECH_TO_TEXT_H
 #define SPEECH_TO_TEXT_H
 
-#include "resource_whisper.h"
+#include "resource_gguf.h"
 
 #include <godot_cpp/classes/mutex.hpp>
 #include <godot_cpp/classes/node.hpp>
@@ -12,7 +12,8 @@
 #include <godot_cpp/variant/array.hpp>
 #include <godot_cpp/variant/callable.hpp>
 
-#include <llama.h>
+#include "../thirdparty/llama.cpp/include/llama.h"
+#include "../thirdparty/llama.cpp/common/common.h"
 
 #include <atomic>
 #include <string>
@@ -28,6 +29,7 @@ struct transcribed_msg {
 class TextToText : public Node {
 public:
 	static TextToText *singleton;
+	const int32_t total_length_of_sequence_with_prompt = 512;
 
 private:
 	GDCLASS(TextToText, Node);
@@ -57,7 +59,7 @@ private:
 		float entropy_threshold = 2.8f;
 		int32_t max_context_size = 224;
 	};
-	Ref<LlamaResource> model;
+	Ref<GGUFResource> model;
 	llama_model *language_model;
 	llama_model_params params;
 	llama_context_params context_parameters{ true };
@@ -71,8 +73,8 @@ public:
 		SPEECH_SETTING_SAMPLE_RATE = 16000,
 	};
 	static TextToText *get_singleton();
-	void set_language_model(Ref<LlamaResource> p_model) { model = p_model; }
-	_FORCE_INLINE_ Ref<LlamaResource> get_language_model() { return model; }
+	void set_language_model(Ref<GGUFResource> p_model) { model = p_model; }
+	_FORCE_INLINE_ Ref<GGUFResource> get_language_model() { return model; }
 	TextToText();
 	~TextToText();
 

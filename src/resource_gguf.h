@@ -5,11 +5,11 @@
 
 using namespace godot;
 
-class LlamaResource : public Resource {
-	GDCLASS(LlamaResource, Resource);
+class GGUFResource : public Resource {
+	GDCLASS(GGUFResource, Resource);
 
 protected:
-	static void _bind_methods() {}
+	static void _bind_methods();
 	String file;
 
 public:
@@ -23,7 +23,7 @@ public:
 	}
 
 	PackedByteArray get_content();
-	LlamaResource() {}
-	~LlamaResource() {}
+	GGUFResource() {}
+	~GGUFResource() {}
 };
 #endif // RESOURCE_JSON_H

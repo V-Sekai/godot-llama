@@ -7,11 +7,8 @@
 .DS_Store
 .vscode
 
-demo/addons
+demo/addons/godot_llama/bin
+demo/addons/godot_llama/models
 *.code-workspace
-bin/addons/godot_whisper/bin/libgodot_whisper.macos.template_release.double.universal.framework/libgodot_whisper.macos.template_release.double.universal
-bin/addons/godot_whisper/bin/libgodot_whisper.macos.template_release.universal.framework/libgodot_whisper.macos.template_release.universal
-bin/addons/godot_whisper/models
-bin/addons/godot_whisper/bin/libgodot_whisper.macos.template_release.universal.framework/libgodot_whisper.macos.template_release.universal
-
-bin/addons/godot_llama/bin/libgodot_llama.linux.template_debug.x86_64.so
+bin/addons/godot_llama/bin
+bin/addons/godot_llama/models
